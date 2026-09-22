@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 /**
  * Lightweight helpers for text-based XOOPS inspections.
  */
-final class PhpTextUtil {
+public final class PhpTextUtil {
 
     private PhpTextUtil() {
     }
@@ -26,6 +26,19 @@ final class PhpTextUtil {
         }
         String name = file.getName().toLowerCase(Locale.ROOT);
         return name.endsWith(".php") || name.endsWith(".inc");
+    }
+
+    /**
+     * True for the view-provider's base-language PSI file. PhpStorm .php files have
+     * PHP + HTML trees; a {@code visitFile} regex walk on both doubles every finding.
+     */
+    static boolean isPrimaryPsiFile(@Nullable PsiFile file) {
+        if (file == null) {
+            return false;
+        }
+        var viewProvider = file.getViewProvider();
+        PsiFile base = viewProvider.getPsi(viewProvider.getBaseLanguage());
+        return base == null || file.equals(base);
     }
 
     static boolean looksLikeLanguageFile(@NotNull PsiFile file) {
@@ -52,7 +65,7 @@ final class PhpTextUtil {
      * Mask comments only (keep string/heredoc contents) so call-site patterns that
      * need literal tokens still work while ignoring commented-out code.
      */
-    static @NotNull String maskCommentsOnly(@NotNull String text) {
+    public static @NotNull String maskCommentsOnly(@NotNull String text) {
         return maskInternal(text, false);
     }
 
@@ -60,7 +73,7 @@ final class PhpTextUtil {
      * Mask comments, quoted strings, and heredoc/nowdoc bodies with spaces so
      * regex matches keep the same offsets but cannot hit non-code.
      */
-    static @NotNull String maskCommentsAndStrings(@NotNull String text) {
+    public static @NotNull String maskCommentsAndStrings(@NotNull String text) {
         return maskInternal(text, true);
     }
 
@@ -68,19 +81,40 @@ final class PhpTextUtil {
         char[] chars = text.toCharArray();
         int i = 0;
         int n = chars.length;
+        // Snippets with no open tag (statement prefixes) are already PHP.
+        // Full files that contain a tag start outside PHP so HTML quotes cannot leak.
+        boolean inPhp = !containsPhpOpenTag(text);
         while (i < n) {
+            if (!inPhp) {
+                int tagLen = phpOpenTagLength(text, i);
+                if (tagLen > 0) {
+                    inPhp = true;
+                    i += tagLen;
+                    continue;
+                }
+                if (chars[i] != '\n' && chars[i] != '\r') {
+                    chars[i] = ' ';
+                }
+                i++;
+                continue;
+            }
+            if (i + 1 < n && chars[i] == '?' && chars[i + 1] == '>') {
+                inPhp = false;
+                i += 2;
+                continue;
+            }
             // Heredoc / nowdoc: <<<IDENT  <<<'IDENT'  <<<"IDENT"
-            if (maskStrings && i + 3 < n && chars[i] == '<' && chars[i + 1] == '<' && chars[i + 2] == '<') {
+            // Detected in both modes so // # /* inside the body are never comments;
+            // characters are wiped only when strings are being masked.
+            if (i + 3 < n && chars[i] == '<' && chars[i + 1] == '<' && chars[i + 2] == '<') {
                 int start = i;
                 i += 3;
                 while (i < n && (chars[i] == ' ' || chars[i] == '\t')) {
                     i++;
                 }
-                boolean nowdoc = false;
                 boolean quoted = false;
                 char quote = 0;
                 if (i < n && (chars[i] == '\'' || chars[i] == '"')) {
-                    nowdoc = chars[i] == '\'';
                     quoted = true;
                     quote = chars[i];
                     i++;
@@ -98,56 +132,66 @@ final class PhpTextUtil {
                 if (quoted && i < n && chars[i] == quote) {
                     i++;
                 }
-                // mask declaration through end of line
-                while (start < i) {
-                    chars[start++] = ' ';
+                // declaration through end of line
+                if (maskStrings) {
+                    for (int k = start; k < i; k++) {
+                        chars[k] = ' ';
+                    }
                 }
                 while (i < n && chars[i] != '\n') {
-                    chars[i++] = ' ';
+                    if (maskStrings) {
+                        chars[i] = ' ';
+                    }
+                    i++;
                 }
-                if (i < n && chars[i] == '\n') {
-                    chars[i++] = ' ';
+                if (i < n) {
+                    i++; // newline
                 }
-                // body until a line that is only IDENT or IDENT;
+                // body until a line that is only IDENT or IDENT followed by a non-word char
                 while (i < n) {
                     int lineStart = i;
                     while (i < n && chars[i] != '\n') {
                         i++;
                     }
-                    String line = text.substring(lineStart, i);
-                    String body = line.stripTrailing().stripLeading();
-                    // Closer: IDENT at start of line; following token may be ; ) , etc., but not more word chars.
-                    boolean closer = false;
-                    if (body.startsWith(ident)) {
-                        if (body.length() == ident.length()) {
-                            closer = true;
-                        } else {
-                            char next = body.charAt(ident.length());
-                            closer = !Character.isLetterOrDigit(next) && next != '_';
+                    int labelStart = lineStart;
+                    while (labelStart < i && (text.charAt(labelStart) == ' ' || text.charAt(labelStart) == '\t')) {
+                        labelStart++;
+                    }
+                    int labelEnd = labelStart + ident.length();
+                    boolean closer = labelEnd <= i && text.startsWith(ident, labelStart)
+                            && (labelEnd == i || !Character.isLetterOrDigit(text.charAt(labelEnd))
+                            && text.charAt(labelEnd) != '_');
+                    int maskEnd = closer ? labelEnd : i;
+                    if (maskStrings) {
+                        for (int k = lineStart; k < maskEnd; k++) {
+                            if (chars[k] != '\r') {
+                                chars[k] = ' ';
+                            }
                         }
                     }
-                    for (int k = lineStart; k < i; k++) {
-                        chars[k] = ' ';
-                    }
-                    if (i < n && chars[i] == '\n') {
-                        chars[i++] = ' ';
-                    }
                     if (closer) {
+                        // Resume PHP at the suffix: punctuation, comments and code can share this line.
+                        i = labelEnd;
                         break;
+                    }
+                    if (i < n) {
+                        i++; // newline
                     }
                 }
                 continue;
             }
             // // line comment
             if (i + 1 < n && chars[i] == '/' && chars[i + 1] == '/') {
-                while (i < n && chars[i] != '\n') {
+                while (i < n && chars[i] != '\n'
+                        && !(chars[i] == '?' && i + 1 < n && chars[i + 1] == '>')) {
                     chars[i++] = ' ';
                 }
                 continue;
             }
             // # line comment
             if (chars[i] == '#') {
-                while (i < n && chars[i] != '\n') {
+                while (i < n && chars[i] != '\n'
+                        && !(chars[i] == '?' && i + 1 < n && chars[i + 1] == '>')) {
                     chars[i++] = ' ';
                 }
                 continue;
@@ -166,6 +210,17 @@ final class PhpTextUtil {
                 continue;
             }
             if (!maskStrings) {
+                // Keep the string, but step over it so // and # inside it are not comments.
+                if (chars[i] == '\'' || chars[i] == '"') {
+                    char quote = chars[i++];
+                    while (i < n && chars[i] != quote) {
+                        i += (chars[i] == '\\' && i + 1 < n) ? 2 : 1;
+                    }
+                    if (i < n) {
+                        i++;
+                    }
+                    continue;
+                }
                 i++;
                 continue;
             }
@@ -206,6 +261,48 @@ final class PhpTextUtil {
             i++;
         }
         return new String(chars);
+    }
+
+    private static boolean containsPhpOpenTag(@NotNull String text) {
+        for (int i = 0; i < text.length(); i++) {
+            if (text.charAt(i) == '<' && phpOpenTagLength(text, i) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Length of a PHP open tag at {@code i}, or 0. Recognizes {@code <?php}, {@code <?=},
+     * and short {@code <?} (not {@code <?xml}).
+     */
+    private static int phpOpenTagLength(@NotNull String text, int i) {
+        int n = text.length();
+        if (i + 1 >= n || text.charAt(i) != '<' || text.charAt(i + 1) != '?') {
+            return 0;
+        }
+        if (i + 2 < n && text.charAt(i + 2) == '=') {
+            return 3;
+        }
+        if (startsIgnoreCase(text, i, "<?php")) {
+            int after = i + 5;
+            if (after == n || !Character.isLetterOrDigit(text.charAt(after))) {
+                return 5;
+            }
+            return 0;
+        }
+        if (startsIgnoreCase(text, i, "<?xml")) {
+            return 0;
+        }
+        return 2;
+    }
+
+    private static boolean startsIgnoreCase(@NotNull String text, int i, @NotNull String prefix) {
+        int n = prefix.length();
+        if (i + n > text.length()) {
+            return false;
+        }
+        return text.regionMatches(true, i, prefix, 0, n);
     }
 
     /**

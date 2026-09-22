@@ -1,0 +1,277 @@
+package org.xoops.support.inspections;
+
+import org.junit.Test;
+
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public final class XoopsResultSetGuardInspectionTest {
+
+    @Test
+    public void unguardedFetchIsReported() {
+        String php = """
+                <?php
+                $result = $xoopsDB->query($sql);
+                while (list($sumIn, $sumOut) = $xoopsDB->fetchRow($result)) {
+                    $amount += $sumIn;
+                }
+                """;
+        List<Integer> hits = XoopsResultSetGuardInspection.unguardedFetchOffsets(php);
+        assertEquals(1, hits.size());
+    }
+
+    @Test
+    public void whileConditionFetchIsCoveredByPrecedingEarlyExit() {
+        String php = """
+                <?php
+                $result = $xoopsDB->query($sql);
+                if (!$xoopsDB->isResultSet($result) || !$result instanceof \\mysqli_result) {
+                    throw new \\RuntimeException('Database query failed');
+                }
+                while (list($sumIn, $sumOut) = $xoopsDB->fetchRow($result)) {
+                    $amount += $sumIn;
+                }
+                """;
+        assertTrue(XoopsResultSetGuardInspection.unguardedFetchOffsets(php).isEmpty());
+    }
+
+    @Test
+    public void reassignmentClearsTheGuard() {
+        String php = """
+                <?php
+                $result = $xoopsDB->query($sql);
+                if (!$xoopsDB->isResultSet($result) || !$result instanceof \\mysqli_result) {
+                    throw new \\RuntimeException('Database query failed');
+                }
+                $result = $xoopsDB->query($sql2);
+                $row = $xoopsDB->fetchArray($result);
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void positiveIfBodyIsGuarded() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if ($db->isResultSet($result)) {
+                    $row = $db->fetchArray($result);
+                }
+                """;
+        assertTrue(XoopsResultSetGuardInspection.unguardedFetchOffsets(php).isEmpty());
+    }
+
+    @Test
+    public void orFallbackIsNotASafePositiveGuard() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if ($db->isResultSet($result) || $fallback) {
+                    $row = $db->fetchArray($result);
+                }
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void reassignmentInsidePositiveGuardIsUnguarded() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if ($db->isResultSet($result)) {
+                    $result = $db->query($sql2);
+                    $row = $db->fetchArray($result);
+                }
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void fetchOnRightHandSideOfAssignmentIsStillGuarded() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if ($db->isResultSet($result)) {
+                    $result = $db->fetchArray($result);
+                }
+                """;
+        assertTrue(XoopsResultSetGuardInspection.unguardedFetchOffsets(php).isEmpty());
+    }
+
+    @Test
+    public void completedAssignmentBeforeFetchInSameStatementIsUnguarded() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if (!$db->isResultSet($result)) {
+                    return;
+                }
+                ($result = false) || $db->fetchArray($result);
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+        int fetchAt = php.indexOf("fetchArray");
+        assertFalse(XoopsResultSetGuardInspection.isFetchGuardedAt(php, fetchAt, "$result"));
+    }
+
+    @Test
+    public void wordOrOperatorCompletesAssignmentBeforeFetch() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if (!$db->isResultSet($result)) {
+                    return;
+                }
+                $result = false or $db->fetchArray($result);
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void tightBindingOperatorsKeepFetchInsideAssignment() {
+        for (String op : new String[] {"?:", "??", "||", "&&"}) {
+            String php = """
+                    <?php
+                    $result = $db->query($sql);
+                    if ($db->isResultSet($result)) {
+                        $result = $a %s $db->fetchArray($result);
+                    }
+                    """.formatted(op);
+            assertTrue(op, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).isEmpty());
+        }
+    }
+
+    @Test
+    public void xorEarlyExitIsNotADominatingGuard() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if (!$db->isResultSet($result) xor $fallback) {
+                    return;
+                }
+                $row = $db->fetchArray($result);
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void xorPositiveGuardIsNotAGuard() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if ($db->isResultSet($result) xor $fallback) {
+                    $row = $db->fetchArray($result);
+                }
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void closureInsidePositiveGuardIsNotGuarded() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if ($db->isResultSet($result)) {
+                    $later = function () use ($db, &$result) {
+                        return $db->fetchArray($result);
+                    };
+                }
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void elseifEarlyExitDoesNotDominate() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if ($skip) {
+                    $log->info('skipped');
+                } elseif (!$db->isResultSet($result)) {
+                    return;
+                }
+                $row = $db->fetchArray($result);
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+    }
+
+    @Test
+    public void commentContainingIsResultSetDoesNotGuard() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                // if (!$db->isResultSet($result)) { return; }
+                $row = $db->fetchArray($result);
+                """;
+        assertEquals(1, XoopsResultSetGuardInspection.unguardedFetchOffsets(php).size());
+        int fetchAt = php.indexOf("fetchArray");
+        assertFalse(XoopsResultSetGuardInspection.isFetchGuardedAt(php, fetchAt, "$result"));
+    }
+
+    @Test
+    public void earlyExitStillGuardsLaterFetch() {
+        String php = """
+                <?php
+                $result = $db->query($sql);
+                if (!$db->isResultSet($result)) {
+                    throw new \\RuntimeException('fail');
+                }
+                $row = $db->fetchArray($result);
+                """;
+        int fetchAt = php.indexOf("fetchArray");
+        assertTrue(XoopsResultSetGuardInspection.isFetchGuardedAt(php, fetchAt, "$result"));
+    }
+
+    @Test
+    public void commentAssignmentDoesNotCountAsAssignBeforeFetch() {
+        for (String prefix : new String[]{"// $result = ignored\n$row = ",
+                "$log = '$result = ignored';\n$row = "}) {
+            assertFalse(InsertBeforeStatementQuickFix.assignsResultBeforeFetch(
+                    prefix, 0, prefix.length(), "$result"));
+        }
+        String prefix = "($result = $db->query($sql)) && ";
+        assertTrue(InsertBeforeStatementQuickFix.assignsResultBeforeFetch(
+                prefix, 0, prefix.length(), "$result"));
+    }
+
+    @Test
+    public void assignmentCheckMasksWholePhpDocumentBeforeSlicing() {
+        String source = "<?php log('<?php $result = ignored', $db->fetchArray($result));";
+        assertFalse(InsertBeforeStatementQuickFix.assignsResultBeforeFetch(
+                source, source.indexOf("log("), source.indexOf("$db->fetchArray"), "$result"));
+    }
+    @Test
+    public void nestedNegationsDoNotProveAnEarlyExit() {
+        for (String condition : new String[]{"!!$db->isResultSet($result)",
+                "!(!$db->isResultSet($result))", "!($other || !$db->isResultSet($result))",
+                "!!($result instanceof \\mysqli_result)"}) {
+            assertEquals(condition, 1, XoopsResultSetGuardInspection.unguardedFetchOffsets(
+                    "<?php if (" + condition + ") return; $db->fetchArray($result);").size());
+        }
+    }
+
+    @Test
+    public void unbracedControlBodiesDoNotDominateLaterFetches() {
+        for (String prefix : new String[]{"if ($enabled)", "while ($enabled)",
+                "foreach ($items as $item)", "for ($i = 0; $i < 2; $i++)"}) {
+            String source = "<?php " + prefix + " if (!$db->isResultSet($result)) return; $db->fetchArray($result);";
+            assertEquals(prefix, 1, XoopsResultSetGuardInspection.unguardedFetchOffsets(source).size());
+            assertFalse(prefix, XoopsResultSetGuardInspection.isFetchGuardedAt(source,
+                    source.indexOf("$db->fetchArray"), "$result"));
+        }
+        assertTrue(XoopsResultSetGuardInspection.unguardedFetchOffsets(
+                "<?php if ($enabled) { if (!$db->isResultSet($result)) return; $db->fetchArray($result); }").isEmpty());
+    }
+    @Test
+    public void unrecognizedNegatedGroupsDoNotProvePositiveGuards() {
+        for (String condition : new String[]{"!(($db->isResultSet($result)))",
+                "!($other || $db->isResultSet($result))"}) {
+            assertEquals(condition, 1, XoopsResultSetGuardInspection.unguardedFetchOffsets(
+                    "<?php if (" + condition + ") { $db->fetchArray($result); }").size());
+        }
+        assertTrue(XoopsResultSetGuardInspection.unguardedFetchOffsets(
+                "<?php if (!($db->isResultSet($result))) return; $db->fetchArray($result);").isEmpty());
+    }
+}
