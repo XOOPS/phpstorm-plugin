@@ -37,8 +37,10 @@ tour is the fixture tree the test-suite uses: copy
 and open the files — every `.php` next to a `.after.php` shows a highlighted
 problem whose Alt+Enter fix produces exactly the `.after.php` content.
 
-The rules that matter most, with what changed against the old text-based
-plugin:
+The complete list, with every rule's default level, what it reports, what its fix
+changes and when it stays silent, is **[INSPECTIONS.md](INSPECTIONS.md)**. This
+section walks through the rules that matter most, with what changed against the
+old text-based plugin:
 
 ### 4.1 XOOPS_ROOT_PATH guard
 
@@ -148,9 +150,11 @@ creating a stub; skip `system_*`, other modules and Smarty comments).
 6. **`$HTTP_POST_VARS`** is an error with a rename to `$_POST`.
 7. **Templates.** `{if $x}` or `{$var}` in a `.tpl` is an error with a
    "Wrap in <{ }>" fix; `<{$smarty.get.op}>` gets "Add |escape".
-8. **Scope.** `assets/js/uploader.php` reading `$_POST` is reported (security
+8. **Scope.** `assets/uploader.php` reading `$_POST` is reported (security
    rules read bundled code); it gets no header, guard or status-line note
-   (convention rules skip it). `db:tag_bar.tpl` inside Publisher is silent.
+   (convention rules skip it). Anything under `assets/js/` is not inspected
+   at all, nor are `tests/` and `vendor/`. `db:tag_bar.tpl` inside Publisher
+   is silent.
 
 ## 5. Language-constant completion, 6. Live templates
 

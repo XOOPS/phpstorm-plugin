@@ -4,6 +4,50 @@ Marketplace plugin `org.xoops.plugin.support`. Versions 0.4.0 to 0.7.2 below are
 rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 release of the previous code base
 (https://github.com/XOOPS/phpstorm-plugin).
 
+## 1.0.0-alpha.5 — 1.0.0 Alpha 5 — NOT RELEASED
+
+False positives from a run over three newbb trees (`280test1/htdocs/modules/02/01inspections`, 2026-10-26), each
+checked against the module source and pinned with a fixture.
+
+- **DeprecatedCoreApi** no longer names `synchronization()`: it is the module handlers' own method (newbb reports 99
+  calls), and the core's `XoopsPersistableObjectHandler::synchronization()` carries no `@deprecated` tag either.
+- **InstallSql** and **SqlFileComment** look only at the file the installer runs: the file an active `sqlfile`
+  entry names, resolved from the module root (so `sql/english/install.sql` counts, in both the
+  `$modversion['sqlfile']['mysql']` and the array-manifest form, with every database entry of an array read), or
+  `sql/mysql.sql` when the manifest names no file or builds one at runtime
+  (`'sql/' . XOOPS_DB_TYPE . '.sql'`); an entry set to `false` switches it off. A leftover `sql/mysql.sql` beside a selected
+  `sql/english/install.sql` is not run and not checked. The manifest is read through the PHP parser, not as text:
+  a commented-out declaration, a string or nowdoc that looks like one, a comparison against `sqlfile`, a `sqlfile`
+  key on any variable other than `$modversion`, and a nested key such as `$modversion['config']['sqlfile']` do not
+  count, while a declaration behind an inline comment, after `?>`, with a multi-line `[XOOPS_DB_TYPE]` index,
+  joined from literals (`'sql/' . 'install.sql'`), or inside `$modversion = array_merge($defaults, [...])` still
+  does. Adminer / phpMyAdmin dumps and old upgrade
+  scripts beside it (`2510debug1.sql`, `xoops_mysql.sql`, `mysql.400.sql`) are never split by SqlUtility, so their
+  MyISAM engine, `xoops_` prefixes and bare `--` lines were 237 + 111 findings about files nothing executes. A file a
+  comment merely mentions is not an installer file. The core's own `install/sql/` schema has no module manifest and
+  stays inspected; any other `sql/` folder outside a module does not.
+- **Unlink** accepts an `SplFileInfo` check: `$info->isFile()` dominating `unlink($info->getRealPath())`, or a
+  variable assigned from `$info->getPathname()`, is the is_file() check, and `$info->isLink()` guards
+  `unlink($info->getPathname())` (the link itself, also when it dangles). `isFile()` before `getPath()` (the parent
+  directory) and `isLink()` before `getRealPath()` (the link's target) are still reported.
+- **UnregisteredTemplate** and **MissingRegisteredTemplate** skip test trees like every other rule; a `db:` include
+  in `tests/example.tpl` was reported as an unregistered template.
+- **MenuAutoload** gains fixtures for `<?php declare(strict_types=1);` on the open-tag line, a header-comment block,
+  a `bootstrap.php` require that already loads the autoloader (no finding), and newbb's real file with two spaces after
+  `<?php` and CRLF line endings. The Marketplace Alpha 4 jar put the require right after `<?php` on such a file
+  (`<?phprequire_once …` ahead of `declare`); this code base inserts above the loading statement, and the fixtures hold
+  it there on PhpStorm 2024.3 and 2026.3.
+- **Build:** `gradlew test -PlocalIde=<PhpStorm install dir>` runs the suite against an installed IDE instead of the
+  pinned 2024.3.5 platform, so a parser change in a newer PhpStorm is caught before a report comes in.
+- **Docs:** `INSPECTIONS.md` lists all 52 inspections with default level, what each reports, what its quick-fix
+  changes and when it stays silent. README and TUTORIAL link to it; the README's Alpha 3 era table is gone. The
+  tutorial no longer claims that `assets/js/` is read by the security rules: that tree is excluded. The
+  **UpdateCreatesTable** description is rewritten in plain words, with a version 1.0 / 1.1 example and xnewsletter's
+  `include/onupdate.php` as the pattern to follow.
+- **Tools:** `tools/gen_descriptions.py` is rebuilt from the shipped description pages and reproduces all 52 byte
+  for byte. It had 35 entries, 12 of them shorter than the pages edited since and two under retired short names, so
+  running it would have overwritten reviewed descriptions.
+
 ## 1.0.0-alpha.4 — 1.0.0 Alpha 4 — Marketplace release 2026-10-26
 
 Alpha 4 as published: the rebuild below (2026-10-24) plus the refinement rounds that followed it, six full runs over

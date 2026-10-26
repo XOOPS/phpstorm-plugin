@@ -8,7 +8,11 @@ the function, and also inside a previous <code>try</code> whose every <code>catc
 <code>break</code> / <code>continue</code> count as an exit. Also accepted: a <code>$this-&gt;exists()</code>-style helper of the
 same class whose body checks the same <code>$this-&gt;…</code> path; a check on <code>$x</code> when the unlinked path is
 <code>realpath($x)</code>; and <code>if (false === file_put_contents($p, …)) return;</code> (or <code>touch()</code>): the code
-created the file itself. A check behind an unrelated <code>&amp;&amp;</code> (<code>if ($a &amp;&amp; !is_file($p)) return;</code>)
-does not count, because a false <code>$a</code> skips it.
+created the file itself. An <code>SplFileInfo</code> object's <code>isFile()</code> counts when its
+<code>getRealPath()</code> or <code>getPathname()</code> is unlinked, directly or through a variable (a
+<code>DirectoryIterator</code> loop), and its <code>isLink()</code> counts when <code>getPathname()</code> (the link
+itself) is unlinked. A check behind an unrelated <code>&amp;&amp;</code> (<code>if ($a &amp;&amp; !is_file($p)) return;</code>)
+does not count, because a false <code>$a</code> skips it; nor does <code>isFile()</code> before <code>getPath()</code>
+(the containing directory) or <code>isLink()</code> before <code>getRealPath()</code> (the link's target).
 </body>
 </html>

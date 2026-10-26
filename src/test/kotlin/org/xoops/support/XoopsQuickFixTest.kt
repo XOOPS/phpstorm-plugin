@@ -2,6 +2,7 @@ package org.xoops.support
 
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.jetbrains.php.lang.psi.PhpFile
 import org.xoops.support.inspections.XoopsAttributeEscapeInspection
 import org.xoops.support.inspections.XoopsAllowlistAnchorInspection
 import org.xoops.support.inspections.XoopsInstallSqlInspection
@@ -339,6 +340,97 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
     fun testUnlinkGuardedByWholeExpression() =
         check(XoopsUnlinkInspection(), "Unlink/unlink", "modules/demo/include/onupdate.php", 1)
 
+    /**
+     * `$info->isFile()` guards `unlink($info->getRealPath())` and `$name = $info->getPathname(); unlink($name)`.
+     * Reported: no check, `getPath()` (the parent directory), and `isLink()` before `getRealPath()` (the link's target).
+     */
+    fun testUnlinkGuardedBySplFileInfoIsFile() =
+        check(XoopsUnlinkInspection(), "Unlink/spl", "modules/demo/class/Cleaner.php", 3)
+
+    fun testInstallSqlIgnoresDumpsTheInstallerNeverRuns() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/fk", "modules/demo/sql/dump.sql", 0)
+
+    fun testSqlFileCommentIgnoresDumpsTheInstallerNeverRuns() =
+        checkSql(XoopsSqlFileCommentInspection(), "InstallSql/fk", "modules/demo/sql/dump.sql", 0)
+
+    /** The core schema has no module manifest, and the core installer still runs it. */
+    fun testSqlFileCommentStillChecksTheCoreSchema() =
+        checkSql(XoopsSqlFileCommentInspection(), "InstallSql/corecomment", "install/sql/mysql.structure.sql", 1)
+
+    /** A dump in a loose `sql/` folder, outside any module and outside `install/sql/`, is run by nothing. */
+    fun testSqlFileCommentIgnoresALooseDumpOutsideAnyModule() =
+        checkSql(XoopsSqlFileCommentInspection(), "InstallSql/loose", "backup/sql/dump.sql", 0)
+
+    /** `sqlfile` naming `sql/english/install.sql` resolves from the module root, two levels above the file. */
+    fun testInstallSqlChecksANestedSqlfileEntry() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/nested", "modules/demo/sql/english/install.sql", 1)
+
+    /** A comment that mentions `sql/upgrade.sql` does not make the installer run it. */
+    fun testInstallSqlIgnoresAFileOnlyACommentNames() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/nested", "modules/demo/sql/upgrade.sql", 0)
+
+    /** `sql/mysql.sql` is only the default: when `sqlfile` selects another file, the installer never runs it. */
+    fun testInstallSqlIgnoresMysqlSqlWhenTheManifestSelectsAnotherFile() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/nested", "modules/demo/sql/mysql.sql", 0)
+
+    /** A MySQL path built at runtime may be `sql/mysql.sql`: a literal pgsql entry must not hide it. */
+    fun testInstallSqlKeepsTheDefaultBesideARuntimePath() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/partial", "modules/demo/sql/mysql.sql", 1)
+
+    /** `'mysql' => false` switches the MySQL install off: the leftover `sql/mysql.sql` is never run. */
+    fun testInstallSqlIgnoresMysqlSqlWhenTheMysqlEntryIsDisabled() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/disabled", "modules/demo/sql/mysql.sql", 0)
+
+    /** `$modversion['sqlfile'] = false` declares no install SQL at all. */
+    fun testInstallSqlIgnoresMysqlSqlWhenSqlfileIsFalse() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/disabledall", "modules/demo/sql/mysql.sql", 0)
+
+    /** The array manifest form: `'sqlfile' => ['mysql' => 'sql/english/install.sql']`. */
+    fun testInstallSqlChecksTheArrayManifestSqlfile() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/arraymanifest", "modules/demo/sql/english/install.sql", 1)
+
+    /**
+     * The manifest is read from the PHP PSI: inline and block comments, a nowdoc holding a comment opener, a string that
+     * looks like a declaration, a comparison, `?>` after a line comment, a multi-line index and several DB entries.
+     */
+    fun testSqlfilePathsReadsOnlyLiveDeclarations() {
+        fun paths(php: String): List<String> =
+            org.xoops.support.inspections.InstallSql.sqlfilePaths(myFixture.configureByText("xoops_version.php", php) as PhpFile)
+        val live = listOf("sql/live.sql")
+        assertEquals(live, paths("<?php /* schema */ \$modversion['sqlfile']['mysql'] = /* x */ 'sql/live.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php /*\n\$modversion['sqlfile']['mysql'] = 'sql/old.sql';\n*/"))
+        assertEquals(emptyList<String>(), paths("<?php \$x = 1; // \$modversion['sqlfile']['mysql'] = 'sql/old.sql';"))
+        assertEquals(live, paths("<?php \$help = <<<'DOC'\n/*\nDOC;\n\$modversion['sqlfile']['mysql'] = 'sql/live.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$help = \"'sqlfile' => 'sql/backup.sql'\";"))
+        assertEquals(emptyList<String>(), paths("<?php if (\$modversion['sqlfile']['mysql'] === 'sql/backup.sql') {}"))
+        assertEquals(live, paths("<?php // note ?><?php \$modversion['sqlfile']['mysql'] = 'sql/live.sql';"))
+        assertEquals(live, paths("<?php \$modversion['sqlfile'][\nXOOPS_DB_TYPE\n] = 'sql/live.sql';"))
+        assertEquals(
+            listOf("sql/pg.sql", "sql/live.sql"),
+            paths("<?php \$modversion['sqlfile'] = ['pgsql' => 'sql/pg.sql', 'mysql' => 'sql/live.sql'];"),
+        )
+        assertEquals(live, paths("<?php \$modversion = ['name' => 'Demo', 'sqlfile' => array('mysql' => 'sql/live.sql')];"))
+        assertEquals(emptyList<String>(), paths("<?php \$files[\$modversion['sqlfile']['mysql']] = 'sql/backup.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php [\$modversion['sqlfile']['mysql'], \$b] = ['sql/live.sql', 'sql/backup.sql'];"))
+        assertEquals(
+            listOf("sql/live.sql"),
+            paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/live.sql'; \$modversion['sqlfile']['mysql'] .= '.sql';"),
+        )
+        assertEquals(live, paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/' . 'live.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/' . \$lang . '.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$other['sqlfile']['mysql'] = 'sql/backup.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$modversion['config']['sqlfile'] = 'sql/backup.sql';"))
+        assertEquals(live, paths("<?php \$modversion = array_merge(\$defaults, ['sqlfile' => ['mysql' => 'sql/live.sql']]);"))
+        assertEquals(emptyList<String>(), paths("<?php \$backup = ['sqlfile' => ['mysql' => 'sql/backup.sql']];"))
+        assertEquals(
+            emptyList<String>(),
+            paths("<?php \$modversion['config'][] = ['name' => 'x', 'options' => ['sqlfile' => 'sql/backup.sql']];"),
+        )
+    }
+
+    fun testUnregisteredTemplateSkipsTestTrees() =
+        check(XoopsUnregisteredTemplateInspection(), "Templates/testtree", "modules/demo/tests/example.tpl", 0)
+
     fun testByRefResolvesParentConstructor() =
         check(XoopsByRefArgumentInspection(), "ByRefArgument/byref", "modules/demo/class/Form/CategoryForm.php", 1)
 
@@ -513,6 +605,22 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
 
     fun testMenuGetsAutoloaderBeforeHelper() =
         check(XoopsMenuAutoloadInspection(), "MenuAutoload/menu", "modules/demo/admin/menu.php", 1,
+            "Require preloads", "modules/demo/admin/menu.after.php")
+
+    fun testMenuWithStrictTypesGetsAutoloaderBeforeHelper() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/strict", "modules/demo/admin/menu.php", 1,
+            "Require preloads", "modules/demo/admin/menu.after.php")
+
+    fun testMenuWithStrictTypesAndBootstrapRequireIsFine() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/bootstrap", "modules/demo/admin/menu.php", 0)
+
+    fun testMenuWithStrictTypesHeaderCommentsGetsAutoloaderBeforeHelper() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/tagstyle", "modules/demo/admin/menu.php", 1,
+            "Require preloads", "modules/demo/admin/menu.after.php")
+
+    /** newbb's real menu.php: two spaces after the open tag, CRLF line endings, the Helper call several statements down. */
+    fun testMenuWithCrlfAndDoubleSpacedDeclareGetsAutoloaderBeforeHelper() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/crlf", "modules/demo/admin/menu.php", 1,
             "Require preloads", "modules/demo/admin/menu.after.php")
 
     fun testClassConstantDoesNotLoadTheClass() =

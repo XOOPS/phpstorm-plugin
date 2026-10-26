@@ -134,7 +134,7 @@ class XoopsMissingRegisteredTemplateInspection : LocalInspectionTool() {
         return object : PsiElementVisitor() {
             override fun visitFile(file: PsiFile) {
                 val php = file as? PhpFile ?: return
-                if (!php.name.equals("xoops_version.php", true) || !Php.isPrimary(php) || XoopsPaths.isExcluded(php)) return
+                if (!php.name.equals("xoops_version.php", true) || !Php.isPrimary(php) || XoopsPaths.isExcluded(php) || XoopsPaths.isTestTree(php)) return
                 val root = php.virtualFile?.parent ?: return
                 for (reg in ManifestTemplates.registrations(php)) {
                     if (root.findFileByRelativePath(reg.diskPath) != null) continue
@@ -189,7 +189,7 @@ class XoopsUnregisteredTemplateInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         return object : PsiElementVisitor() {
             override fun visitFile(file: PsiFile) {
-                if (!file.name.lowercase().endsWith(".tpl") || !Php.isPrimary(file) || XoopsPaths.isExcluded(file)) return
+                if (!file.name.lowercase().endsWith(".tpl") || !Php.isPrimary(file) || XoopsPaths.isExcluded(file) || XoopsPaths.isTestTree(file)) return
                 val vf = file.virtualFile ?: return
                 val root = XoopsPaths.moduleRoot(vf) ?: return
                 val relative = XoopsPaths.relativeToModule(vf) ?: return

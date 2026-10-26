@@ -220,7 +220,6 @@ class XoopsDeprecatedCoreApiInspection : XoopsInspection() {
             // config / blocks / model
             "deleteConfigOption" to ("use the config handler's deleteConfig()" to null),
             "getCatByModule" to ("use getConfigsByModule()" to null),
-            "synchronization" to ("use the model's getAll()/getObjects()" to null),
             "getAllBlocksByGroup" to ("use XoopsBlockHandler::getAllBlocksByGroup() through xoops_getHandler('block')" to null),
             // Smarty 2 names on XoopsTpl (Smarty 3/4/5)
             "assign_by_ref" to ("use assign()" to "assign"),
