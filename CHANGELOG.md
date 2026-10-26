@@ -6,6 +6,11 @@ rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 relea
 
 ## 1.0.0-alpha.5 — not released
 
+- **Build:** the Kotlin compiler runs with `-Xjvm-default=all`. Without it the compiled `XoopsToolWindowFactory`
+  carried delegating stubs for every default method of the platform's `ToolWindowFactory` (`getAnchor`, `getIcon`,
+  `manage`, `isApplicable`, …), which the Plugin Verifier reported as overrides of `@ApiStatus.Internal` API and
+  failed CI on. The source never declared them.
+
 False positives from the XoopsCore27 run (`01inspections`, 2,241 findings), each checked against the core
 source, pinned with a fixture and re-run on copies of the real files.
 

@@ -42,6 +42,12 @@ intellijPlatform {
 
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        // Without this the compiler emits delegating stubs for every default method of a platform Kotlin
+        // interface (ToolWindowFactory.getAnchor/getIcon/manage …); the Plugin Verifier reads those stubs as
+        // overrides of @ApiStatus.Internal API and fails the build.
+        freeCompilerArgs.add("-Xjvm-default=all")
+    }
 }
 
 tasks {
