@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Smarty Request Escape</title></head>
+<body>
+<code>&lt;{$smarty.get.x}&gt;</code>, <code>$smarty.request</code>, <code>$smarty.post</code>,
+<code>$smarty.cookie</code> and <code>$smarty.server</code> print the request into the page.
+<p>Unless the tag carries <code>|escape</code> that is reflected XSS. The fix appends
+<code>|escape</code> after any other modifier.</p>
+</body>
+</html>

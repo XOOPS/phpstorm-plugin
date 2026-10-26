@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Strict Calendar Cast</title></head>
+<body>
+Under <code>declare(strict_types=1)</code>, <code>mktime(0, 0, 0, date('n'), 1, date('Y'))</code> throws a
+TypeError on every call: <code>date()</code> returns a string and the calendar functions take <code>int</code>.
+<p>The fix wraps the argument in <code>(int)</code>; on a numeric string the cast is exact.</p>
+</body>
+</html>

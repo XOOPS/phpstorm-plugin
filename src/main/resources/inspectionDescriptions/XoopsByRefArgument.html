@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: By Ref Argument</title></head>
+<body>
+A call passes a temporary (a call result, a literal) where the resolved declaration takes a reference.
+Resolution goes through the PSI, so <code>parent::__construct()</code> is checked against the parent's
+signature, not the current file's.
+</body>
+</html>

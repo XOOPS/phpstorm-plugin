@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Update Creates Table</title></head>
+<body>
+<p>A <code>CREATE TABLE</code> in <code>sql/mysql.sql</code> that no update path mentions is never created for a module that is already installed. If a released version shipped without the table, sites updating from it fail with error 1146 on first use. Whether such a version exists cannot be told from the tree, and a table as old as the module needs no update path, so this is a weak note.</p><p>Update paths searched: <code>onupdate.php</code>, <code>include/onupdate.php</code>, <code>include/update.php</code>, <code>include/install.php</code> and every YAML under <code>sql/</code>. An update that re-runs the SQL file or calls <code>createMissingTables()</code> / <code>synchronizeSchema()</code> covers every table. Modules without any update callback are not reported, nor is an SQL file the installer never runs: no active <code>$modversion['sqlfile']</code> (commented out or <code>false</code>) and no install callback that reads <code>mysql.sql</code> itself.</p><p>Report only: the idempotent create (table-exists check, migrate YAML) belongs to the author.</p>
+</body>
+</html>

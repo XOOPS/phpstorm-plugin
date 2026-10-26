@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Local Xoops Option</title></head>
+<body>
+<code>$xoopsOption['template_main'] = 'x.tpl'</code> inside a function or method writes a local array unless the
+function declares <code>global $xoopsOption</code>. The page then renders without its template, and a read is an
+undefined variable.
+<p>The fix writes <code>$GLOBALS['xoopsOption']</code>. Script-level code already runs in the global scope and is
+not reported, nor is a function that declares the global or takes <code>$xoopsOption</code> as a parameter.</p>
+</body>
+</html>

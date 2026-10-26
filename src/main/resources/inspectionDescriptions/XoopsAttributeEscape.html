@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Attribute Escape</title></head>
+<body>
+<code>getVar()</code> is not an escaper &mdash; <code>XOBJ_DTYPE_OTHER</code> / <code>SOURCE</code> fields
+come back raw and attribute context needs <code>ENT_QUOTES</code> regardless.
+<p>Context is decided from the string literal that precedes the accessor in the same
+concatenation (<code>'&lt;a href="' . $obj-&gt;getVar('url')</code>). PHP code such as
+<code>$title = &hellip;</code>, array keys and link text are never attribute context. Inside a URL
+query (<code>'?src=' . &hellip;</code>) the fix uses <code>rawurlencode()</code> on the raw value. The fix wraps the complete
+call expression, receiver included, and is idempotent.</p>
+<p>The DTYPE comes from the class's <code>initVar()</code>; for an untyped receiver, from the one declaration of
+the key in the module's <code>class/</code> / <code>src/</code>, else in core <code>kernel/</code>. Numeric DTYPEs are never reported; TXTBOX, TXTAREA,
+URL and EMAIL are already <code>htmlspecialchars()</code>'d (<code>ENT_QUOTES</code>) by the default and
+<code>'e'</code> formats. The attribute fix is offered only for a raw value (<code>OTHER</code>, <code>SOURCE</code>,
+format <code>'n'</code>): when the DTYPE cannot be resolved the finding is a weak note without a fix, because
+wrapping an already-escaped value prints <code>&amp;amp;#039;</code>.</p>
+</body>
+</html>

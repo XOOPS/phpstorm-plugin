@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Smarty5 Template Prep</title></head>
+<body>
+Constructs that work on Smarty 4 but need rework before a Smarty 5 core: bare <code>&lt;{parent}&gt;</code> /
+<code>&lt;{child}&gt;</code>, <code>&lt;{insert}&gt;</code>, <code>&lt;{make_nocache}&gt;</code>,
+<code>config_load scope=</code>, and PHP functions used as modifiers (<code>|substr</code>, <code>|trim</code>,
+<code>|strtolower</code> …), which Smarty 5 only accepts when registered.
+<p>Off by default: enable it for a tree that is being prepared for Smarty 5. There is no quick-fix.</p>
+</body>
+</html>

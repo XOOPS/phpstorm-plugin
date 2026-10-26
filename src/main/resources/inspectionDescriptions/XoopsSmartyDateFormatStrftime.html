@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Smarty Date Format Strftime</title></head>
+<body>
+<code>|date_format:'%d.%m.%Y'</code>: a format with <code>%</code> codes runs <code>strftime()</code>, deprecated
+since PHP 8.1 and removed from Smarty 5. Without <code>%</code>, <code>date_format</code> uses <code>date()</code>.
+<p>The fix rewrites <code>%Y %y %m %d %e %H %M %S %p %%</code> to <code>Y y m d j H i s A %</code>
+(<code>%M</code> is minutes, so it becomes <code>i</code>). A format with a locale token
+(<code>%A</code>, <code>%B</code>, <code>%j</code> …) or with literal letters is reported without a fix: letters
+are format codes in <code>date()</code>, so <code>'Le %d'</code> cannot be rewritten mechanically.</p>
+<p>Not reported on cores older than 2.5.11, whose Smarty always used <code>strftime()</code>.</p>
+</body>
+</html>

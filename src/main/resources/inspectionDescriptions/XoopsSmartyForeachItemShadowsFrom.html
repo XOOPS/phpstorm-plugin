@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Smarty Foreach Item Shadows From</title></head>
+<body>
+<code>&lt;{foreach item=story from=$story}&gt;</code>: Smarty 3 and later refuse an item variable with the same
+name as the array it loops over.
+<p>The fix renames the item to <code>story_item</code> in the tag and in every <code>$story</code> of the loop body,
+up to <code>&lt;{foreachelse}&gt;</code> or <code>&lt;{/foreach}&gt;</code>. A nested loop that declares
+<code>item=story</code> again keeps its own variable.</p>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Allowlist Anchor</title></head>
+<body>
+<p>In PCRE, <code>$</code> matches before a final newline. <code>preg_match('/^[a-z]+$/', $name)</code> accepts <code>"script\n"</code>, and the <code>in_array()</code> / <code>===</code> comparison that follows does not recognise it.</p><p>Reported when the pattern is a single-quoted literal ending in an unescaped <code>$</code> without the <code>D</code> or <code>m</code> modifier and the subject variable is compared exactly later in the same scope, with no reassignment in between (<code>$file = substr($file, 0, -4)</code> compares something else). The fix replaces that <code>$</code> with <code>\z</code>.</p>
+</body>
+</html>

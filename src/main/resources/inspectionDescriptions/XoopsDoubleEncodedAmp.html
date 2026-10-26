@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Double Encoded Amp</title></head>
+<body>
+<code>header('Location: …')</code> and <code>ModuleAdmin::addItemButton()</code> take a raw URL:
+<code>renderButton()</code> escapes it and <code>header()</code> sends it as is. A literal
+<code>&amp;amp;</code> in that string reaches the server as a parameter named <code>amp;…</code>, so the
+token check fails. The fix writes <code>&amp;</code>. A URL printed into HTML is left alone.
+<p><code>redirect_header()</code> (and the helper's <code>redirect()</code>) also take a raw URL, but turn
+<code>&amp;amp;</code> back into <code>&amp;</code> for their meta refresh, so the browser requests the same URL
+either way: there it is a weak note, and the same fix gives identical output.</p>
+</body>
+</html>

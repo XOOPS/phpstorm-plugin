@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Path Containment</title></head>
+<body>
+<p><code>strpos($path, $base) === 0</code> or <code>str_starts_with($path, $base)</code> on a filesystem path is a prefix test, not containment: <code>/safe/../outside/secret</code> starts with <code>/safe</code>, and <code>/uploads2/x</code> starts with <code>/uploads</code>.</p><p>Not reported: a <code>realpath()</code>'d path (directly, through a local, or behind a failure ternary such as <code>$root !== false ? realpath(&hellip;) : false</code>, through a <code>str_replace()</code> that only swaps separators, or a private method's parameter whose every caller in the class passes one) against a base ending in <code>DIRECTORY_SEPARATOR</code> or <code>'/'</code> &mdash; that is containment; a literal needle (<code>'/'</code>, <code>'www.'</code>, <code>'ldaps://'</code>) &mdash; a shape test; a prefix strip for display (<code>str_starts_with($p, $root . '/') ? substr($p, strlen($root)) : $p</code>); a URL, a referer, or a prefix test inside a function that handles URLs (named for URLs or redirects, taking a URL, or calling <code>parse_url()</code>). A resolved path against a base without a separator gets its own message.</p><p>Report only. The fix is <code>realpath()</code> on both sides and a comparison against the directory plus a separator, placed where the path is final.</p>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Double Cp Header</title></head>
+<body>
+A second <code>xoops_cp_header()</code> on one request breaks the admin menu.
+<p>The inspection reads the sibling <code>admin_header.php</code>: only when that file really calls
+<code>xoops_cp_header()</code> is the page's own call a duplicate. Modules whose header file only
+loads <code>cp_header.php</code> keep their call. Without an <code>admin_header.php</code>, a later call
+duplicates the page's own first call only when that first call is a top-level statement; one call in
+each branch of an <code>if</code> / <code>else</code> renders once.</p>
+<p>The delete fix is offered only for the <code>admin_header.php</code> case, and not when
+<code>$xoopsOption</code> (for example <code>template_main</code>) changes on the way to the second call. A
+duplicate of the page's own call (the system admin pages: one on top, another in an error branch) is
+reported without a fix: the page has used the first theme in between, so deleting the second call is not
+output-neutral. The fix is never part of "Fix all".</p>
+</body>
+</html>
