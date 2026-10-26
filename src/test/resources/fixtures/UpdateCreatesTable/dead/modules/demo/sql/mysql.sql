@@ -1,0 +1,4 @@
+CREATE TABLE demo_messages (
+  msg_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (msg_id)
+) ENGINE=InnoDB;
