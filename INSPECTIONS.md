@@ -237,9 +237,9 @@ If it has existed since the module's first release, every site already has it an
 added later, add a create-if-missing step to the update code. That is why it is only a weak note.
 
 Update paths searched:
-`onupdate.php`, `include/onupdate.php`, `include/update.php`, `include/install.php` and every YAML under `sql/`. An
-update that re-runs the SQL file or calls `createMissingTables()` / `synchronizeSchema()` covers every table. Modules
-without any update callback are not reported, nor is an SQL file the installer never runs (`sqlfile` commented out or
+`onupdate.php`, `include/onupdate.php`, `include/update.php`, `include/install.php` and the YAML files directly in `sql/`. An
+update that re-runs the SQL file or calls `createMissingTables()` / `synchronizeSchema()` covers every table. A module
+with none of these files is not reported, nor is an SQL file the installer never runs (`sqlfile` commented out or
 `false`). A weak note, report only.
 
 ## Module files and bootstrap

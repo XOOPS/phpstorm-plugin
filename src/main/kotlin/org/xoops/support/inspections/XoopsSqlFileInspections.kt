@@ -205,7 +205,7 @@ class XoopsInstallSqlInspection : LocalInspectionTool() {
 /**
  * A `CREATE TABLE` in `sql/mysql.sql` that no update path mentions is never created for a module
  * that is already installed: the next upgrade fails with 1146. Update paths: `onupdate.php`,
- * `include/onupdate.php`, `include/update.php`, every YAML under `sql`, or an update that re-runs the
+ * `include/onupdate.php`, `include/update.php`, `include/install.php`, the YAML files directly in `sql`, or an update that re-runs the
  * SQL file / `createMissingTables()`. Report only — the idempotent create belongs to the author.
  */
 class XoopsUpdateCreatesTableInspection : LocalInspectionTool() {
