@@ -46,9 +46,12 @@ jobs:
           build-mode: manual
 
       - name: Compile
+        # The build cache answered compileKotlin FROM-CACHE on the first run, so no compiler ran and CodeQL traced
+        # nothing. Force a real compile, keep the Kotlin compiler in-process so the tracer sees it.
         run: |
           chmod +x ./gradlew
-          ./gradlew compileKotlin --no-daemon --stacktrace
+          ./gradlew compileKotlin --no-daemon --no-build-cache --rerun-tasks --stacktrace \
+            -Dkotlin.compiler.execution.strategy=in-process
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
