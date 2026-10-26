@@ -1,7 +1,12 @@
 <!doctype html>
-<html>
+<html lang="en">
+<head><title>XOOPS: Deprecated Db Api</title></head>
 <body>
-Flags deprecated <code>queryF()</code> and <code>quoteString()</code>.
-Use <code>query()</code>/<code>exec()</code> and <code>quote()</code> instead.
+<code>queryF()</code> and <code>quoteString()</code> are deprecated.
+<p><code>queryF()</code> is the forced-write alias and delegates to <code>exec()</code>; <code>query()</code>
+refuses a mutation on a GET request. The replacement therefore follows the SQL: <code>exec()</code>
+for a write, <code>query()</code> for a read (resolved through a single local <code>$sql = &hellip;</code>
+assignment when needed), and <strong>no automatic rewrite</strong> when the SQL cannot be resolved.
+A call inside <code>if ($force)</code> is a write by intent.</p>
 </body>
 </html>

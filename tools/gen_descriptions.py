@@ -2,6 +2,7 @@
 
 Run from the plugin root:  python -I tools/gen_descriptions.py
 """
+import re
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent.parent / "src/main/resources/inspectionDescriptions"
@@ -245,6 +246,9 @@ created. The SQL file is checked from the <code>$modversion['sqlfile']</code> en
 
 OUT.mkdir(parents=True, exist_ok=True)
 for name, body in DESCRIPTIONS.items():
-    html = "<!doctype html>\n<html>\n<body>\n" + body.strip() + "\n</body>\n</html>\n"
+    # lang + title keep SonarCloud's web rules (S5254, S1098) quiet; the IDE renders only the body.
+    title = "XOOPS: " + re.sub(r"(?<!^)(?=[A-Z])", " ", name.removeprefix("Xoops"))
+    html = ("<!doctype html>\n<html lang=\"en\">\n<head><title>" + title + "</title></head>\n<body>\n"
+            + body.strip() + "\n</body>\n</html>\n")
     (OUT / f"{name}.html").write_text(html, encoding="utf-8")
 print(f"wrote {len(DESCRIPTIONS)} descriptions to {OUT}")
