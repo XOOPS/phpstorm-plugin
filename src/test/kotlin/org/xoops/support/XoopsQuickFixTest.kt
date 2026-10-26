@@ -377,6 +377,14 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
     fun testInstallSqlKeepsTheDefaultBesideARuntimePath() =
         checkSql(XoopsInstallSqlInspection(), "InstallSql/partial", "modules/demo/sql/mysql.sql", 1)
 
+    /** `'mysql' => false` switches the MySQL install off: the leftover `sql/mysql.sql` is never run. */
+    fun testInstallSqlIgnoresMysqlSqlWhenTheMysqlEntryIsDisabled() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/disabled", "modules/demo/sql/mysql.sql", 0)
+
+    /** `$modversion['sqlfile'] = false` declares no install SQL at all. */
+    fun testInstallSqlIgnoresMysqlSqlWhenSqlfileIsFalse() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/disabledall", "modules/demo/sql/mysql.sql", 0)
+
     /** The array manifest form: `'sqlfile' => ['mysql' => 'sql/english/install.sql']`. */
     fun testInstallSqlChecksTheArrayManifestSqlfile() =
         checkSql(XoopsInstallSqlInspection(), "InstallSql/arraymanifest", "modules/demo/sql/english/install.sql", 1)
