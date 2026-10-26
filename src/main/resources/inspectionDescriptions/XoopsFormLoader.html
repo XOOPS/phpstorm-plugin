@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Form Loader</title></head>
+<body>
+<code>XoopsForm*</code> classes are not autoloaded. A file whose class extends one of them needs
+<code>xoops_load('XoopsFormLoader')</code> (or a load of exactly the parent class) before the
+<code>class</code> keyword.
+<p>The fix inserts a real statement in front of the class and its docblock &mdash; never on an existing
+line, never inside a comment. The core's own <code>class/xoopsform/</code> is what the loader includes and is
+not reported.</p>
+</body>
+</html>

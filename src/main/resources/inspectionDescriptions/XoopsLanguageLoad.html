@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Language Load</title></head>
+<body>
+A page script (it boots <code>mainfile.php</code>) uses <code>_MD_</code> / <code>_CO_</code> / <code>_AM_</code>
+constants but loads no catalog: neither <code>xoops_loadLanguage()</code>, nor the XMF helper's
+<code>loadLanguage()</code>, nor an include of <code>header.php</code> / <code>admin_header.php</code> /
+<code>common.php</code>.
+<p>A file that does not boot <code>mainfile.php</code> is included by one that did and uses its catalogs
+(system admin pages, blocks, <code>admin_footer.php</code>, Smarty plugins): not reported.</p>
+</body>
+</html>

@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Unserialize</title></head>
+<body>
+<code>unserialize()</code> without <code>['allowed_classes' =&gt; false]</code> can instantiate arbitrary classes.
+<p>The fix adds the option; the argument count comes from the PSI, so an inner call with commas is handled.</p>
+</body>
+</html>

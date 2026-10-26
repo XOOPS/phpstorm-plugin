@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><title>XOOPS: Deprecated Core Api</title></head>
+<body>
+Core APIs the 2.7.4 tree marks <code>@deprecated</code> (list generated from the real
+<code>class/</code>, <code>kernel/</code> and <code>include/</code> docblocks) plus pre-2.5 idioms that still
+surface in old modules: <code>XoopsTree</code>, <code>XoopsComments</code>, <code>Snoopy</code>,
+<code>XOBJ_DTYPE_UNICODE_*</code>, <code>xoops_getModuleOption()</code>, the sanitizer's
+<code>makeTboxData4*()</code> family, Smarty 2 method names on <code>XoopsTpl</code>, and PHP 4
+constructor calls (<code>parent::XoopsObject()</code>).
+<p>PhpStorm's own deprecation inspection needs the core in the project; this one works on a
+standalone module and says what to use instead. A rename fix is offered only where the
+replacement takes the same arguments (<code>destoryVars</code> &rarr; <code>destroyVars</code>,
+<code>parent::XoopsObject()</code> &rarr; <code>parent::__construct()</code>, <code>assign_by_ref</code> &rarr;
+<code>assignByRef</code> &hellip;). The UNICODE dtypes are never renamed: they decide how stored rows
+are decoded.</p>
+</body>
+</html>
