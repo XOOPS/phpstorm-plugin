@@ -1,25 +1,88 @@
 <!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<!-- Dynamic (no require-restart) so sandbox auto-reload works after buildPlugin. -->
+<!-- Dynamic (no require-restart): every extension point used here is marked dynamic; the IDE hot-swaps updates. -->
 <idea-plugin>
     <id>org.xoops.plugin.support</id>
     <name>XOOPS Support</name>
-    <!-- version is patched from gradle.properties (pluginVersion) — do not duplicate it here. -->
+    <!-- version and since-build are patched from build.gradle.kts — do not duplicate them here. -->
     <vendor url="https://github.com/XOOPS/phpstorm-plugin" email="dev@xoops.org">XOOPS Project</vendor>
 
-    <!-- since-build/until-build are patched from gradle.properties (until open-ended for 2026.2+). -->
-
     <description><![CDATA[
-        <p><b>XOOPS Support</b> — PhpStorm / IntelliJ helper for XOOPS 2.5 / 2.7 / 4.0 Core and module development.</p>
-        <p><i>1.0.0 Alpha 3</i> — Goffy field-report fixes; language-constant navigation; unregistered templates; UNICODE dtype.</p>
+        <p><b>XOOPS Support</b> brings XOOPS CMS knowledge into PhpStorm and IntelliJ IDEA: it finds the mistakes
+        that break XOOPS modules and fixes most of them with one Alt+Enter. It covers XOOPS 2.5, 2.7, 2.8 and 4.0, for
+        core and module development.</p>
+
+        <p>Every quick-fix is tested against whole-file fixtures and applied twice to prove it is idempotent. Before
+        release the full set was run on <b>224 real modules</b>: 46,000 findings and 10,000 files rewritten, with no
+        entry point blocked and no parse error.</p>
+
+        <h3>52 inspections with quick-fixes</h3>
         <ul>
-          <li>Project detection, scanner, and HTML overview tool window</li>
-          <li>Inspections with Alt+Enter quick fixes (guards, query/exec, Request, Smarty, templates)</li>
-          <li>Live templates, language-constant completion <b>and Ctrl+B</b>, hybrid module scaffold</li>
-          <li>Dynamic install/update (no IDE restart when unload succeeds)</li>
+          <li><b>Database:</b> migrates <code>queryF()</code> and <code>quoteString()</code>, picks <code>query()</code>
+              or <code>exec()</code> from the SQL, adds result-set guards that keep the function's failure contract,
+              and flags <code>ORDER BY</code> or request-in-SQL injection.</li>
+          <li><b>Security:</b> <code>Xmf\Request</code> instead of raw superglobals, missing CSRF checks,
+              <code>unserialize()</code> without <code>allowed_classes</code>, dynamic code, weak tokens, path
+              containment and attribute escaping.</li>
+          <li><b>Bootstrap and structure:</b> direct-access guards that never block an entry point, double
+              <code>xoops_cp_header()</code>, form loader, admin menu autoload and file headers.</li>
+          <li><b>Templates and Smarty:</b> template registration in both directions, <code>&lt;{ }&gt;</code>
+              delimiters, <code>$smarty.get</code> escaping, the Smarty 5 API, and the template checks of the
+              XOOPS 2.7.4 upgrade preflight (unquoted <code>xo*</code> plugin arguments, <code>includeq</code> /
+              <code>foreachq</code>, foreach item shadowing, strftime <code>date_format</code>).</li>
+          <li><b>Language files, installer SQL and deprecated core API</b> (the 2.7.4 deprecation list).</li>
         </ul>
+
+        <h3>Version-aware fixes</h3>
+        <p>The plugin reads your tree's <code>include/version.php</code> and only offers rewrites your core supports.
+        Older cores get compatible code instead of an API they don't have.</p>
+
+        <h3>Productivity</h3>
+        <ul>
+          <li><b>New → XOOPS Module…</b> scaffolds a legacy or hybrid module (Helper, PSR-4 autoloader, Xmf admin)
+              whose output passes every inspection.</li>
+          <li>Completion, Ctrl+B and Find Usages for language constants (<code>_MD_*</code>, <code>_MI_*</code>,
+              <code>_AM_*</code>…), including in Smarty templates.</li>
+          <li>Live templates for common XOOPS code.</li>
+          <li>A project tool window that gives an overview of your modules.</li>
+        </ul>
+
+        <h3>Getting started</h3>
+        <p>Install the plugin and open a XOOPS project. Detection is automatic. You can set the Core Version and other
+        options under <b>Settings → Languages &amp; Frameworks → XOOPS Support</b>, and the inspections are listed
+        under <b>Settings → Editor → Inspections → XOOPS</b>. The plugin installs and updates without an IDE restart.</p>
+
+        <p><a href="https://github.com/XOOPS/phpstorm-plugin">Source, documentation and issues on GitHub</a></p>
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>Not released</h3>
+        <ul>
+          <li>Six template inspections ported from the XOOPS 2.7.4 upgrade preflight, for <code>.tpl</code> and <code>.html</code> on 2.5.11+ cores:
+            unquoted <code>xo*</code> plugin argument (<code>&lt;{xoAdminIcons home.png}&gt;</code> → <code>'home.png'</code>),
+            <code>includeq</code> / <code>foreachq</code> → <code>include</code> / <code>foreach</code> and <code>&lt;{php}&gt;</code> reported,
+            foreach <code>item=x from=$x</code> renamed to <code>x_item</code> through the loop body,
+            <code>block_parent</code> / <code>block_child</code> → <code>$smarty.block.*</code>,
+            strftime <code>date_format</code> → <code>date()</code> codes, and an opt-in Smarty 5 preparation report.</li>
+          <li>Unlike the preflight repair, arguments are always quoted with <code>'</code> (most <code>compiler.xo*.php</code> plugins strip only <code>'</code>),
+            a date format with literal letters is not rewritten, and a nested loop's <code>from=$x.list</code> is renamed with the outer item.</li>
+          <li>From rector_xoops: <code>new ModuleAdmin()</code> → <code>\Xmf\Module\Admin::getInstance()</code>; core includes of the deprecated
+            <code>class/xoopsobject.php</code>, <code>xoopsmodule.php</code>, <code>xoopsuser.php</code> and <code>mimetypes.inc.php</code> stubs moved to
+            <code>kernel/</code> / <code>include/</code>; the eight deprecated <code>xoops_load()</code> short names (<code>'cache'</code> → <code>'xoopscache'</code> …);
+            and a new inspection for <code>$xoopsOption[…]</code> inside a function without <code>global $xoopsOption</code>.</li>
+        </ul>
+        <h3>1.0.0 Alpha 4 (1.0.0-alpha.4)</h3>
+        <p>A rebuild on the PHP PSI. Every quick-fix is backed by a whole-file fixture and applied twice (idempotence);
+        the set was reviewed on 224 modules before release.</p>
+        <ul>
+          <li>45 inspections (from 10): bootstrap, database, security, templates, language files, installer SQL, deprecated core API.</li>
+          <li>Core version gate: <code>isResultSet()</code> (2.5.11) and <code>exec()</code> (2.5.12) rewrites are offered only when the tree's <code>include/version.php</code> has them; older cores get <code>if (!$result)</code> and <code>queryF()</code>.</li>
+          <li>Direct-access guard recognises <code>throw</code>, compound conditions, status-line and <code>return</code> bodies; never guards an entry point or a bundled script that does not load XOOPS.</li>
+          <li>Superglobal rewrite leaves dynamic callees (<code>new $_REQUEST['c']()</code>) and non-XOOPS scripts (payment callbacks, bundled apps) alone.</li>
+          <li>Bare <code>--</code> lines in installer SQL are blanked; <code>--text</code> becomes <code>-- text</code>. The fix works in Inspect Code batch apply and survives "Remove trailing spaces on save".</li>
+          <li><code>unserialize()</code> gets <code>allowed_classes</code> only where the result is used as an array.</li>
+          <li>Dynamic install and update without restart (language-constant cache is a project service).</li>
+          <li>Settings page (Core Version override, auto-scan, startup balloon), <b>New → XOOPS Module…</b> scaffold with a legacy or hybrid layout (Helper, PSR-4 autoloader, Xmf admin side) whose output passes every inspection, Tools → XOOPS Support menu, and Ctrl+B / Find Usages on language constants used as strings or in Smarty templates - all carried over from Alpha 3 and rebuilt.</li>
+        </ul>
         <h3>1.0.0 Alpha 3 (1.0.0-alpha.3)</h3>
         <ul>
           <li>Goffy / wgSimpleAcc: inspections no longer report every finding twice (PHP+HTML PSI).</li>
@@ -44,162 +107,216 @@
           <li>Dynamic plugin: load/unload without restart when possible</li>
           <li>CI and GitHub Releases (tag must match pluginVersion)</li>
         </ul>
+    
     ]]></change-notes>
 
-    <!-- PHP is mandatory. Marketplace Plugin Verifier against IntelliJ IDEA (IU)
-         reports "missing mandatory dependency" unless the PHP plugin is included
-         in that run — schedule PhpStorm (PS), not IDEA. -->
     <depends>com.intellij.modules.platform</depends>
     <depends>com.jetbrains.php</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="org.xoops.support.XoopsStartupActivity"/>
-
         <notificationGroup id="XOOPS Support" displayType="BALLOON" isLogByDefault="true"/>
 
-        <projectConfigurable
-                parentId="language"
-                instance="org.xoops.support.settings.XoopsConfigurable"
-                id="org.xoops.support.settings"
-                displayName="XOOPS Support"/>
+        <postStartupActivity implementation="org.xoops.support.XoopsProjectDetector"/>
 
-        <toolWindow
-                id="XOOPS Support"
-                anchor="right"
-                factoryClass="org.xoops.support.ui.XoopsToolWindowFactory"
-                icon="/icons/toolWindowXoops.svg"/>
+        <defaultLiveTemplates file="/liveTemplates/XOOPS.xml"/>
 
-        <defaultLiveTemplates file="liveTemplates/Xoops.xml"/>
+        <completion.contributor language="PHP"
+                                implementationClass="org.xoops.support.completion.XoopsLanguageConstantCompletionContributor"/>
 
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsRootPathGuardInspection"
-                displayName="Missing XOOPS_ROOT_PATH direct-access guard"
-                shortName="XoopsRootPathGuard"/>
+        <projectConfigurable parentId="language" id="org.xoops.support.settings" displayName="XOOPS Support"
+                             instance="org.xoops.support.XoopsConfigurable"/>
 
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsSuperglobalInspection"
-                displayName="Raw superglobal usage (prefer \Xmf\Request)"
-                shortName="XoopsSuperglobal"/>
+        <psi.referenceContributor language="PHP"
+                                  implementation="org.xoops.support.completion.XoopsLanguageConstantReferenceContributor"/>
 
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="ERROR"
-                implementationClass="org.xoops.support.inspections.XoopsQueryExecInspection"
-                displayName="Mutating SQL passed to query() (use exec())"
-                shortName="XoopsQueryExec"/>
+        <toolWindow id="XOOPS Support"
+                    anchor="right"
+                    icon="/icons/toolWindowXoops.svg"
+                    factoryClass="org.xoops.support.toolwindow.XoopsToolWindowFactory"/>
 
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="ERROR"
-                implementationClass="org.xoops.support.inspections.XoopsResultSetGuardInspection"
-                displayName="fetch* without isResultSet guard"
-                shortName="XoopsResultSetGuard"/>
+        <!-- Bootstrap, structure -->
+        <localInspection language="PHP" shortName="XoopsRootPathGuard" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="Include-only file without XOOPS_ROOT_PATH guard"
+                         implementationClass="org.xoops.support.inspections.XoopsRootPathGuardInspection"/>
+        <localInspection language="PHP" shortName="XoopsDoubleCpHeader" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Second xoops_cp_header() on one request"
+                         implementationClass="org.xoops.support.inspections.XoopsDoubleCpHeaderInspection"/>
+        <localInspection language="PHP" shortName="XoopsFormLoader" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="XoopsForm subclass without the form loader"
+                         implementationClass="org.xoops.support.inspections.XoopsFormLoaderInspection"/>
+        <localInspection language="PHP" shortName="XoopsFileHeader" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="File header docblock without @license"
+                         implementationClass="org.xoops.support.inspections.XoopsFileHeaderInspection"/>
+        <!-- Off by default: file-scope reasoning cannot see the catalog a caller loaded (both Publisher hits were include-order cases). -->
+        <localInspection language="PHP" shortName="XoopsLanguageLoad" groupName="XOOPS" enabledByDefault="false" level="WEAK WARNING"
+                         displayName="Language constant used without a loaded catalog"
+                         implementationClass="org.xoops.support.inspections.XoopsLanguageLoadInspection"/>
+        <localInspection language="PHP" shortName="XoopsLanguageRole" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="Language constant in the wrong catalog"
+                         implementationClass="org.xoops.support.inspections.XoopsLanguageRoleInspection"/>
 
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsDeprecatedDbApiInspection"
-                displayName="Deprecated database API (queryF / quoteString)"
-                shortName="XoopsDeprecatedDbApi"/>
+        <!-- Database -->
+        <localInspection language="PHP" shortName="XoopsDeprecatedDbApi" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Deprecated database API (queryF, quoteString)"
+                         implementationClass="org.xoops.support.inspections.XoopsDeprecatedDbApiInspection"/>
+        <localInspection language="PHP" shortName="XoopsQueryExec" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Mutating SQL passed to query() instead of exec()"
+                         implementationClass="org.xoops.support.inspections.XoopsMutatingQueryInspection"/>
+        <localInspection language="PHP" shortName="XoopsResultSetGuard" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="fetch*() without a dominating isResultSet() guard"
+                         implementationClass="org.xoops.support.inspections.XoopsResultSetGuardInspection"/>
 
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsMissingRegisteredTemplateInspection"
-                displayName="Registered template missing on disk"
-                shortName="XoopsMissingRegisteredTemplate"/>
+        <!-- Security -->
+        <localInspection language="PHP" shortName="XoopsSuperglobal" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="Raw superglobal instead of Xmf\Request"
+                         implementationClass="org.xoops.support.inspections.XoopsSuperglobalInspection"/>
+        <localInspection language="PHP" shortName="XoopsAttributeEscape" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Accessor interpolated into an HTML attribute or URL"
+                         implementationClass="org.xoops.support.inspections.XoopsAttributeEscapeInspection"/>
+        <localInspection language="PHP" shortName="XoopsCsrf" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Mutating switch branch without CSRF token check"
+                         implementationClass="org.xoops.support.inspections.XoopsCsrfInspection"/>
+        <localInspection language="PHP" shortName="XoopsUnserialize" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="unserialize() without allowed_classes"
+                         implementationClass="org.xoops.support.inspections.XoopsUnserializeInspection"/>
+        <localInspection language="PHP" shortName="XoopsGuestUser" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="isset($xoopsUser) is true for guests"
+                         implementationClass="org.xoops.support.inspections.XoopsGuestUserInspection"/>
+        <localInspection language="PHP" shortName="XoopsUnlink" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="unlink() without is_file() check"
+                         implementationClass="org.xoops.support.inspections.XoopsUnlinkInspection"/>
+        <localInspection language="PHP" shortName="XoopsSetcookie" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="setcookie() instead of xoops_setcookie()"
+                         implementationClass="org.xoops.support.inspections.XoopsSetcookieInspection"/>
+        <localInspection language="PHP" shortName="XoopsDynamicCode" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Dynamic code: $$name, extract(), eval()"
+                         implementationClass="org.xoops.support.inspections.XoopsDynamicCodeInspection"/>
+        <localInspection language="PHP" shortName="XoopsOrderBy" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="ORDER BY built from getSort()/getOrder() or the request"
+                         implementationClass="org.xoops.support.inspections.XoopsOrderByInspection"/>
+        <localInspection language="PHP" shortName="XoopsLegacySuperglobal" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="$HTTP_POST_VARS and other removed superglobals"
+                         implementationClass="org.xoops.support.inspections.XoopsLegacySuperglobalInspection"/>
+        <localInspection language="PHP" shortName="XoopsDeprecatedCoreApi" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Deprecated core API (classes, functions, methods, UNICODE dtypes, PHP 4 constructors)"
+                         implementationClass="org.xoops.support.inspections.XoopsDeprecatedCoreApiInspection"/>
 
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WEAK WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsIncludeOnceHeaderInspection"
-                displayName="include of header/footer instead of include_once"
-                shortName="XoopsIncludeOnceHeader"/>
+        <!-- PHP correctness -->
+        <localInspection language="PHP" shortName="XoopsHttpStatus" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="Hard-coded HTTP status line"
+                         implementationClass="org.xoops.support.inspections.XoopsHttpStatusInspection"/>
+        <localInspection language="PHP" shortName="XoopsByRefArgument" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Temporary passed to a by-reference parameter"
+                         implementationClass="org.xoops.support.inspections.XoopsByRefArgumentInspection"/>
 
-        <localInspection
-                language="Smarty"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsWrongSmartyDelimiterInspection"
-                displayName="Wrong Smarty delimiter (use XOOPS &lt;{ }&gt;)"
-                shortName="XoopsWrongSmartyDelimiter"/>
+        <!-- Templates (run on xoops_version.php and .tpl files) -->
+        <localInspection shortName="XoopsMissingRegisteredTemplate" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Registered template missing where the installer reads it"
+                         implementationClass="org.xoops.support.inspections.XoopsMissingRegisteredTemplateInspection"/>
+        <localInspection shortName="XoopsUnregisteredTemplate" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="Template or db: include not registered"
+                         implementationClass="org.xoops.support.inspections.XoopsUnregisteredTemplateInspection"/>
+        <localInspection shortName="XoopsWrongSmartyDelimiter" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Smarty tag without the XOOPS &lt;{ }&gt; delimiters"
+                         implementationClass="org.xoops.support.inspections.XoopsSmartyDelimiterInspection"/>
+        <localInspection shortName="XoopsSmartyRequestEscape" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="$smarty.get / $smarty.request printed without |escape"
+                         implementationClass="org.xoops.support.inspections.XoopsSmartyRequestEscapeInspection"/>
+        <localInspection language="PHP" shortName="XoopsLocalXoopsOption" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="$xoopsOption used as a local inside a function"
+                         implementationClass="org.xoops.support.inspections.XoopsLocalXoopsOptionInspection"/>
+        <!-- Ported from the 2.7.4 upgrade preflight (Smarty4/5TemplateChecks + Repair); Smarty 3+ cores only -->
+        <localInspection shortName="XoopsSmartyUnquotedPluginArg" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Unquoted argument to an xo* Smarty plugin"
+                         implementationClass="org.xoops.support.inspections.XoopsSmartyUnquotedPluginArgInspection"/>
+        <localInspection shortName="XoopsSmartyRemovedTag" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Removed Smarty tag (includeq, foreachq, php, include_php)"
+                         implementationClass="org.xoops.support.inspections.XoopsSmartyRemovedTagInspection"/>
+        <localInspection shortName="XoopsSmartyForeachItemShadowsFrom" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="foreach item named like its from array"
+                         implementationClass="org.xoops.support.inspections.XoopsSmartyForeachItemShadowsFromInspection"/>
+        <localInspection shortName="XoopsSmartyBlockShorthand" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="block_parent / block_child shorthand"
+                         implementationClass="org.xoops.support.inspections.XoopsSmartyBlockShorthandInspection"/>
+        <localInspection shortName="XoopsSmartyDateFormatStrftime" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="date_format with strftime() codes"
+                         implementationClass="org.xoops.support.inspections.XoopsSmartyDateFormatStrftimeInspection"/>
+        <localInspection shortName="XoopsSmarty5TemplatePrep" groupName="XOOPS" enabledByDefault="false" level="WEAK WARNING"
+                         displayName="Template construct that needs rework for Smarty 5"
+                         implementationClass="org.xoops.support.inspections.XoopsSmarty5TemplatePrepInspection"/>
+        <localInspection language="PHP" shortName="XoopsDoubleEncodedAmp" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="&amp;amp; inside a URL passed to redirect_header() / addItemButton()"
+                         implementationClass="org.xoops.support.inspections.XoopsDoubleEncodedAmpInspection"/>
+        <localInspection language="PHP" shortName="XoopsStrictCalendarCast" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="strict_types: string passed to mktime()/checkdate()"
+                         implementationClass="org.xoops.support.inspections.XoopsStrictCalendarCastInspection"/>
+        <localInspection language="PHP" shortName="XoopsLocaleConstant" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Module language constant defined nowhere"
+                         implementationClass="org.xoops.support.inspections.XoopsLocaleConstantInspection"/>
+        <localInspection language="PHP" shortName="XoopsDuplicateDefine" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Constant defined twice in a language file"
+                         implementationClass="org.xoops.support.inspections.XoopsDuplicateDefineInspection"/>
+        <localInspection language="PHP" shortName="XoopsThemeConstant" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="THEME_* constant defined by a module"
+                         implementationClass="org.xoops.support.inspections.XoopsThemeConstantInspection"/>
+        <localInspection language="PHP" shortName="XoopsMenuAutoload" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="admin/menu.php uses a module class before the autoloader"
+                         implementationClass="org.xoops.support.inspections.XoopsMenuAutoloadInspection"/>
+        <localInspection language="PHP" shortName="XoopsHandlerSignature" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Handler getObjects() not declared by reference"
+                         implementationClass="org.xoops.support.inspections.XoopsHandlerSignatureInspection"/>
+        <localInspection language="PHP" shortName="XoopsSqlConcat" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Request value concatenated into SQL"
+                         implementationClass="org.xoops.support.inspections.XoopsSqlConcatInspection"/>
+        <localInspection language="PHP" shortName="XoopsSqlComment" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Bare -- comment in an install SQL file"
+                         implementationClass="org.xoops.support.inspections.XoopsSqlCommentInspection"/>
 
-        <localInspection
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsUnregisteredTemplateInspection"
-                displayName="Template on disk not registered in xoops_version.php"
-                shortName="XoopsUnregisteredTemplate"/>
-
-        <localInspection
-                language="PHP"
-                groupName="XOOPS"
-                enabledByDefault="true"
-                level="WARNING"
-                implementationClass="org.xoops.support.inspections.XoopsDeprecatedUnicodeDtypeInspection"
-                displayName="Deprecated XOBJ_DTYPE_UNICODE_* constant"
-                shortName="XoopsDeprecatedUnicodeDtype"/>
-
-        <completion.contributor
-                language="PHP"
-                implementationClass="org.xoops.support.completion.XoopsLanguageConstantCompletionContributor"/>
-
-        <!-- Same contributor for Smarty templates when the Smarty plugin is present -->
-        <completion.contributor
-                language="Smarty"
-                implementationClass="org.xoops.support.completion.XoopsLanguageConstantCompletionContributor"/>
-
-        <psi.referenceContributor
-                language="PHP"
-                implementation="org.xoops.support.completion.XoopsLanguageConstantReferenceContributor"/>
-        <psi.referenceContributor
-                language="Smarty"
-                implementation="org.xoops.support.completion.XoopsLanguageConstantReferenceContributor"/>
+        <!-- 0.7.0: harvested after review round 4 -->
+        <localInspection shortName="XoopsInstallSql" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Installer SQL the installer cannot run (FOREIGN KEY, hard-coded prefix, MyISAM)"
+                         implementationClass="org.xoops.support.inspections.XoopsInstallSqlInspection"/>
+        <localInspection shortName="XoopsUpdateCreatesTable" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="CREATE TABLE that no module update path creates"
+                         implementationClass="org.xoops.support.inspections.XoopsUpdateCreatesTableInspection"/>
+        <localInspection shortName="XoopsSqlFileComment" groupName="XOOPS" enabledByDefault="true" level="ERROR"
+                         displayName="Bare '--' comment line in installer SQL"
+                         implementationClass="org.xoops.support.inspections.XoopsSqlFileCommentInspection"/>
+        <localInspection language="PHP" shortName="XoopsPathContainment" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Prefix check used as path containment"
+                         implementationClass="org.xoops.support.inspections.XoopsPathContainmentInspection"/>
+        <localInspection language="PHP" shortName="XoopsIsFileAsset" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="file_exists() / is_readable() accepts a directory before a file read"
+                         implementationClass="org.xoops.support.inspections.XoopsIsFileAssetInspection"/>
+        <localInspection language="PHP" shortName="XoopsAllowlistAnchor" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Allowlist regex anchored with $ before an exact comparison"
+                         implementationClass="org.xoops.support.inspections.XoopsAllowlistAnchorInspection"/>
+        <localInspection language="PHP" shortName="XoopsPreloadGlobal" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Preload assigns $xoopsModule or $xoopsModuleConfig"
+                         implementationClass="org.xoops.support.inspections.XoopsPreloadGlobalInspection"/>
+        <localInspection language="PHP" shortName="XoopsWeakToken" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Weak token generation, password hash or secret comparison"
+                         implementationClass="org.xoops.support.inspections.XoopsWeakTokenInspection"/>
+        <localInspection language="PHP" shortName="XoopsSmarty5Api" groupName="XOOPS" enabledByDefault="true" level="WARNING"
+                         displayName="Smarty API removed in Smarty 5 (core 2.8)"
+                         implementationClass="org.xoops.support.inspections.XoopsSmarty5ApiInspection"/>
+        <localInspection language="PHP" shortName="XoopsIncludeOnceHeader" groupName="XOOPS" enabledByDefault="true" level="WEAK WARNING"
+                         displayName="include of header.php / footer.php instead of include_once"
+                         implementationClass="org.xoops.support.inspections.XoopsIncludeOnceHeaderInspection"/>
     </extensions>
 
     <actions>
-        <group id="org.xoops.support.XoopsMenu"
-               text="XOOPS Support"
-               description="XOOPS development actions"
-               popup="true">
+        <group id="org.xoops.support.XoopsMenu" text="XOOPS Support" description="XOOPS development actions" popup="true">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
-            <action id="org.xoops.support.ShowProjectInfo"
-                    class="org.xoops.support.actions.ShowXoopsProjectInfoAction"
-                    text="Show XOOPS Project Info"
-                    description="Detect XOOPS roots and modules in this project"/>
-            <action id="org.xoops.support.RefreshOverview"
-                    class="org.xoops.support.actions.RefreshXoopsOverviewAction"
-                    text="Refresh XOOPS Overview"
-                    description="Rescan modules and open the XOOPS Support tool window"/>
-            <action id="org.xoops.support.NewModuleStub"
-                    class="org.xoops.support.actions.NewXoopsModuleStubAction"
-                    text="New XOOPS Module Stub…"
-                    description="Scaffold a module (legacy + optional PSR-4 files)"/>
+            <action id="org.xoops.support.ShowProjectInfo" class="org.xoops.support.actions.ShowProjectInfoAction"
+                    text="Show XOOPS Project Info" description="Detect XOOPS roots and modules in this project"/>
+            <action id="org.xoops.support.RefreshOverview" class="org.xoops.support.actions.RefreshOverviewAction"
+                    text="Refresh XOOPS Overview" description="Rescan modules and open the XOOPS Support tool window"/>
+            <action id="org.xoops.support.NewModuleStub" class="org.xoops.support.actions.NewModuleAction"
+                    text="New XOOPS Module…" description="Scaffold a module (legacy or hybrid layout)"/>
         </group>
-        <action id="org.xoops.support.NewModuleFromNewMenu"
-                class="org.xoops.support.actions.NewXoopsModuleStubAction"
-                text="XOOPS Module…"
-                description="Scaffold a new XOOPS module">
+        <action id="org.xoops.support.NewModuleFromNewMenu" class="org.xoops.support.actions.NewModuleAction"
+                text="XOOPS Module…" description="Scaffold a new XOOPS module">
             <add-to-group group-id="NewGroup" anchor="last"/>
         </action>
     </actions>

@@ -1,326 +1,183 @@
-# XOOPS Support — Feature Tutorial
+# XOOPS Support Tutorial
 
-Hands-on guide for the **XOOPS Support** PhpStorm plugin (`org.xoops.plugin.support`).
-
-| | |
-| --- | --- |
-| Repository | [github.com/XOOPS/phpstorm-plugin](https://github.com/XOOPS/phpstorm-plugin) |
-| Install ZIP | [Releases](https://github.com/XOOPS/phpstorm-plugin/releases) or `build/distributions/xoops-support-*.zip` |
-| What's New | **Settings → Plugins → XOOPS Support → What's New** |
+A feature-by-feature walkthrough of the XOOPS Support plugin, with the exact
+steps to try each feature and what you should see. Version covered: 0.6.1.
 
 ## 1. Install
 
-```bash
-./gradlew buildPlugin
-# Windows: gradlew.bat buildPlugin
-```
-
-Then **Install Plugin from Disk…** → `build/distributions/xoops-support-*.zip` → restart.
+1. Build the zip (`./gradlew buildPlugin`) or take
+   `build/distributions/xoops-support-1.0.0-alpha.4.zip`.
+2. PhpStorm → **Settings → Plugins** → gear icon → **Install Plugin from
+   Disk…** → select the zip → **Restart IDE**.
+3. After restart, **Settings → Plugins → Installed** shows "XOOPS Support
+   ". Its **What's New** tab renders the changelog.
 
 ## 2. Project detection
 
-1. Open a **real XOOPS install** (with `mainfile.php` or `htdocs/mainfile.php`). This plugin repository alone is not a XOOPS site root.
-2. Optional balloon: “XOOPS Support active”.
-3. **Tools → XOOPS Support → Show XOOPS Project Info** (runs in the background).
-4. **Settings** (search “XOOPS Support”): enable/disable, Core Version, suppress notification.
+**Try it:** Open a XOOPS tree — either a full install (`mainfile.php` at the
+project root or under `htdocs/`) or a standalone module (a directory with
+`xoops_version.php` at its root).
 
-## 3. Tool window / scanner
+**You should see:** a balloon "XOOPS install detected / XOOPS 2.x.y". The
+version is read from `include/version.php`. Click **Don't show again** to
+silence it (stored in `.idea/xoopsSupport.xml`).
 
-1. **View → Tool Windows → XOOPS Support**
-2. **Refresh** (or **Tools → XOOPS Support → Refresh XOOPS Overview**)
-3. Click findings to open files.
+## 3. The XOOPS tool window
 
-![XOOPS Support Overview tool window: modules table and findings](https://plugins.jetbrains.com/files/33478/screenshot_200ef8b4-f28f-4bbd-95f3-3f310b27fed7)
+Click **XOOPS Support** in the right-hand sidebar: module overview (dirname,
+manifests, template/language counts) and filesystem-level findings (registered
+template missing on disk, standard Smarty `{ }` delimiters). Click a finding to
+jump to it.
 
-**Reading the Overview.** The header line gives the totals (here 22 modules, 316 findings) and the detected core line (**XOOPS 2.7.x**, from the Core Version setting or auto-detection) with the web root the scan used.
+## 4. Inspections
 
-The **Modules** table lists every directory under `modules/` that has a manifest, one row per module:
+All live under **Settings → Editor → Inspections → PHP → XOOPS**. The fastest
+tour is the fixture tree the test-suite uses: copy
+`src/test/resources/fixtures/*/*/modules/demo` into any project's `modules/`
+and open the files — every `.php` next to a `.after.php` shows a highlighted
+problem whose Alt+Enter fix produces exactly the `.after.php` content.
 
-| Column | Meaning |
-| --- | --- |
-| Manifest | `xoops_version.php` (legacy), `module.json` (4.0), or `hybrid` when both exist |
-| TPL | `.tpl` files under `templates/` |
-| Lang | `.php` files under `language/` (all locales) |
-| Pre | `.php` files under `preloads/` |
-| Cls | `.php` files under `class/` and `src/` together |
+The rules that matter most, with what changed against the old text-based
+plugin:
 
-The counts are a quick health read: **TPL 0** means the module renders nothing of its own (fine for a library module such as `protector` or `xwhoops`), **Lang** grows with every shipped locale (each adds its own set of files), and an unexpectedly large **Cls** usually means a vendored library sits under `class/` or `src/`.
+### 4.1 XOOPS_ROOT_PATH guard
 
-**Findings** are listed per module in the same order as the table. Each line is a kind, a message and a `file:line` link that opens the editor at that spot. The kinds map onto the section 4 inspections:
+**Fires on:** an include-only file (class, preload, include, block) with no
+`defined('XOOPS_ROOT_PATH') || exit('Restricted access');`.
 
-| Finding | Inspection |
-| --- | --- |
-| `MUTATING_QUERY` | 4.6 `XoopsQueryExec` |
-| `DEPRECATED_QUERY_F`, `DEPRECATED_QUOTE_STRING` | 4.1 `XoopsDeprecatedDbApi` |
-| `RAW_REQUEST` | 4.7 `XoopsSuperglobal`, `$_REQUEST` only; keyed `$_GET` / `$_POST` are left to the editor |
-| `MISSING_REGISTERED_TEMPLATE` | 4.8 `XoopsMissingRegisteredTemplate` |
-| `TEMPLATE_CASE_MISMATCH` | 4.8 `XoopsMissingRegisteredTemplate`: filename/directory spelling differs from disk |
-| `UNREGISTERED_TEMPLATE` | 4.9 `XoopsUnregisteredTemplate` |
-| `WRONG_SMARTY_DELIMITER` | 4.10 `XoopsWrongSmartyDelimiter` |
-| `SCAN_ERROR` | a file or directory the scanner could not read |
+**Never fires on:** a file that bootstraps the core — any top-level `require`
+of `mainfile.php`, `header.php`, `cp_header.php`, `admin_header.php`,
+`print.php` …, even after `error_reporting()` or flag assignments;
+`preloads/autoloader.php`; language files; 404 stubs; a file already guarded
+with `\defined(...)`.
 
-The scanner reports the **first** occurrence per file for the code-pattern kinds, so one `RAW_REQUEST` line can stand for several uses in that file; the editor inspection marks each one. The guard and `isResultSet` rules run only in the editor, where they have the PSI they need.
+**Fix:** inserts the guard after `namespace` / `declare`, before `use` or the
+class docblock — the docblock stays attached to its class.
 
-Use the Overview as the whole-site view: triage a large install or a module you have just imported, then open a file and let Alt+Enter do the individual fixes. The scan runs as a background task and honours **Cancel**.
+### 4.2 Second xoops_cp_header()
 
-## 4. Inspections + Alt+Enter
+**Fires on:** `xoops_cp_header()` after `require admin_header.php` **only when
+that sibling file itself calls `xoops_cp_header()`**. Publisher-style modules
+whose header file only loads `cp_header.php` keep their call. The delete fix
+is not offered in "Fix all".
 
-1. Copy `test-fixtures/bad_module_sample.php` under `htdocs/modules/_xoops_demo/`.
-2. Open it — highlights for guards, query/exec, Request, etc.
-3. **Alt+Enter** on each highlight and apply the fix.
-4. For Smarty: a `.tpl` with bare `{if …}` should offer delimiter conversion.
-5. Goffy / wgSimpleAcc shapes: `test-fixtures/wgsimpleacc_shapes.php` (namespaced `die` guard + `while (list = fetchRow)`) and `test-fixtures/index_404_stub.php` (must **not** warn).
+### 4.3 Deprecated database API
 
-All inspections live under **Settings → Editor → Inspections → XOOPS**. Each can be switched off or downgraded there, and the Inspection ID below is what you put in a `@noinspection` comment or an `.idea/inspectionProfiles` file. Every inspection is silent in `vendor/`, `templates_c/`, `cache/` and `node_modules/`.
+**Fires on:** `->queryF(…)`, `->quoteString(…)`.
 
-### 4.1 Deprecated database API — `XoopsDeprecatedDbApi`
+**Fix:** follows the SQL. `queryF($sql)` with `$sql = 'UPDATE …'` two lines up
+becomes `exec($sql)`; with a SELECT it becomes `query($sql)`; inside
+`if ($force)` it is a write. A `$sql` that comes from a parameter gets the
+warning and **no fix** — `query()` would refuse the write on GET, which is how
+the old plugin killed the item counter.
 
-Flags `queryF()` and `quoteString()`. Use `query()` / `exec()` and `quote()` instead.
+### 4.4 Mutating SQL passed to query()
 
-**Why.** `queryF()` was the "force" variant that skipped the write block on `query()`. Since XOOPS 2.5.12 the split is explicit: `query()` refuses mutating SQL and `exec()` is the only sanctioned write path, so `queryF()` no longer has a job. `quoteString()` is a plain alias of `quote()` kept for backward compatibility and scheduled for removal.
+**Fires on:** `->query($sql)` whose SQL resolves to INSERT / UPDATE / DELETE /
+DDL. An unresolved `$sql` is not a finding. **Fix:** `exec()`.
 
-```php
-// before
-$db->queryF('UPDATE ' . $db->prefix('news') . ' SET hits = hits + 1');
-$name = $db->quoteString($name);
+### 4.5 fetch*() without isResultSet()
 
-// after
-$db->exec('UPDATE ' . $db->prefix('news') . ' SET hits = hits + 1');
-$name = $db->quote($name);
-```
+**Fires on:** `fetchArray` / `fetchRow` / `fetchBoth` with no dominating
+`isResultSet()`: a positive check in the enclosing `if`/`while` condition
+counts, so does `if (!$db->isResultSet($r)) return …;` or `if (!$r) return …;`
+in a preceding statement, until `$r` is reassigned.
 
-**Quick-fixes.** `quoteString()` is renamed to `quote()`. For `queryF()` the inspection reads the first string argument to decide what to offer:
+**Reversed condition:** a fetch inside `if (!$db->isResultSet($r)) { … }` gets
+its own message (that is a bug in the module, not a missing guard).
 
-- SQL starting with `SELECT` / `SHOW` / `DESCRIBE` / `EXPLAIN`: rename to `query()` only.
-- SQL starting with `INSERT` / `UPDATE` / `DELETE` / `REPLACE` / `TRUNCATE` / `ALTER` / `DROP` / `CREATE`: `exec()` is offered first, `query()` second.
-- SQL that cannot be read (a variable, a concatenation): both renames are offered; pick by intent.
-
-`exec()` takes one argument, so the `exec()` rename is withheld while the call still passes `$limit` / `$start`. Drop those first, then re-run the fix.
-
-### 4.2 Deprecated `XOBJ_DTYPE_UNICODE_*` — `XoopsDeprecatedUnicodeDtype`
-
-`XOBJ_DTYPE_UNICODE_*` constants were deprecated in XOOPS 2.7.3 (core issue #164) and are scheduled for removal in 4.0. The quick-fix renames the constant to its non-UNICODE successor (`XOBJ_DTYPE_TXTBOX`, `TXTAREA`, `URL`, `EMAIL`, `ARRAY`, `OTHER`). Value migration stays a core concern and is not performed here. Silent when the project Core Version is set to 2.5.
-
-**Why.** The `UNICODE_*` types date from the pre-UTF-8 era when a field had to declare that it might hold multibyte text. Every supported core runs on `utf8mb4`, so the distinction is dead weight: the sanitizer treats `XOBJ_DTYPE_UNICODE_TXTBOX` and `XOBJ_DTYPE_TXTBOX` identically. Renaming is safe at the `initVar()` site because it changes only which constant name is looked up, not how the stored value is read or written.
+**Fix:** inserts, with the right indentation,
 
 ```php
-// before
-$this->initVar('title', XOBJ_DTYPE_UNICODE_TXTBOX, null, true, 255);
-
-// after
-$this->initVar('title', XOBJ_DTYPE_TXTBOX, null, true, 255);
-```
-
-**Core Version gate.** The 2.5 LTS line never deprecated these constants, so a module that must keep running on 2.5 gets no warning. Set Core Version to **2.5** in Settings for that project; **Auto**, **2.7** and **4.0** all report.
-
-### 4.3 `isResultSet` guard — `XoopsResultSetGuard`
-
-Warns when `fetchArray` / `fetchRow` / `fetchBoth` appears without a dominating `isResultSet` check. Prefer the two-part guard:
-
-```php
-$result = $db->query($sql);
-if (!$db->isResultSet($result) || !$result instanceof \mysqli_result) {
-    throw new \RuntimeException('Database query failed');
-}
-while (list($id, $title) = $db->fetchRow($result)) {
-    // ...
+if (!$this->db->isResultSet($result)) {
+    return 0;          // from the function's return type or its existing failure return
 }
 ```
 
-An early-exit guard covers later fetches of the same variable, including `while (list(...) = $db->fetchRow($result))`, until that variable is reassigned. The quick-fix inserts before the enclosing statement using the current PSI (safe to apply several times after Inspect Code).
+### 4.6 Accessor in an HTML attribute
 
-**Why two parts.** `query()` returns `false` on failure, and `fetchArray(false)` is a fatal `TypeError` on PHP 8. `isResultSet()` is the XOOPS check; the `instanceof \mysqli_result` half is for static analysers such as Scrutinizer and PHPStan, which do not know that `isResultSet()` narrows the type.
+**Fires on:** `$obj->getVar('x')` concatenated after a string literal that
+leaves an attribute open (`'<a href="' . $obj->getVar('url')`). PHP code such
+as `$title = …`, array keys and link text are never attribute context. Inside
+`'?src=' . …` the context is a URL.
 
-**What counts as guarded.** The analysis is textual, so it follows a few explicit rules rather than full control flow:
+**Fix:** `htmlspecialchars((string) $images['main']->getVar('x'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')`
+— the whole call, receiver included — or `rawurlencode((string) …)` in a URL.
+Applying it twice changes nothing.
 
-- A negative check that throws, returns or exits (`if (!$db->isResultSet($result)) { return; }`) covers every later fetch of `$result` in the same block. It stops covering at a reassignment of `$result`, at a nested `function`, or when the enclosing `}` closes.
-- A positive check (`if ($db->isResultSet($result)) { ... }`) covers fetches inside its body, brace-less body included. `||` and `xor` in a positive condition disqualify it: `if ($db->isResultSet($result) || $fallback)` can enter the body with `$result === false`, so the fetch inside is still reported. `||` is fine only in the terminating negative form above.
-- `$result = $db->fetchArray($result)` inside a guarded region stays guarded: the fetch reads the old value. `$result = false or $db->fetchArray($result)` does not, because `or` binds looser than `=` and the assignment completes first.
-- `&&`, `and` and `xor` in the guard condition disqualify it. `if (!isResultSet($r) && $x) return;` can fall through while `$r` is still `false`.
-- Comments and strings are masked first, so a commented-out guard never counts.
+### 4.7 Superglobals
 
-**Guard quick-fix scope.** The guard is inserted within the existing statement list. Unbraced `if`, `while`, `for` and `foreach` bodies receive a warning without a quick-fix; add braces first so the guard can stay inside the control flow.
+`$_POST['id']` → `Request::getString('id', '', 'POST')`;
+`isset($_POST['new'])` → `Request::hasVar('new', 'POST')` (the `use Xmf\Request`
+alias is reused when present). A write (`$_GET['x'] = …`), `empty()`,
+`null !== $_POST['x']`, a dynamic key, `foreach ($_POST …)` and `$_REQUEST` are
+reported without a fix. Vendored code under `assets/` is skipped.
 
-### 4.4 `include_once` for headers — `XoopsIncludeOnceHeader`
+### 4.8 The rest
 
-XOOPS module entry points should load `header.php` / `footer.php` with `include_once` (not bare `include`).
+Form loader (statement before the class docblock, parent-class load accepted),
+file header (host file only; third-party banners noted, not rewritten),
+`unserialize()` (`allowed_classes`), `isset($xoopsUser)`, `unlink()` without
+`is_file()`, `setcookie()`, `header('HTTP/1.0 404')`, by-reference arguments
+(resolved through the real parent), CSRF switch branches (content, not label;
+a POST-only gate does not cover a GET `$op`), language catalog roles (one note
+per stray `modinfo1.php`), language loading (helper `loadLanguage()` counts),
+and the two template checks (re-point a misplaced registration instead of
+creating a stub; skip `system_*`, other modules and Smarty comments).
 
-**Why.** `header.php` starts the theme, opens the output buffer and pulls in `$xoopsTpl`; `footer.php` renders and flushes. Including either twice, which happens easily once a page delegates to a shared `include/` file, produces duplicate headers or a blank page. `include_once` makes the second include a no-op. The rule applies to the core files and to a module's own `header.php` / `footer.php`, with or without the `XOOPS_ROOT_PATH .` prefix.
+### 4.9 New in 0.5.0 — try these on an old module
 
-```php
-// before
-include XOOPS_ROOT_PATH . '/header.php';
-include __DIR__ . '/footer.php';
+1. **Receiver proof.** Open a class with its own `query()` wrapper (Publisher's
+   `class/Versioncontrol/VersionControlMySQL.php`): `$this->query('UPDATE …')` is
+   not reported; `$this->xoopsDB->queryF($sql)` is, with the `exec()` fix.
+2. **Legacy guards.** `if (!$result) { return $ret; }` before a fetch gets a weak
+   note; Alt+Enter rewrites it in place to `if (!$this->db->isResultSet($result))`.
+   `$db->fetchArray($db->query($sql))` (query nested in the fetch) is reported
+   without a fix.
+3. **DTYPE-aware escaping.** `value='" . $obj->getVar('mime_id')` (an
+   `XOBJ_DTYPE_INT` field) is silent; `getVar('x', 'n')` or an `XOBJ_DTYPE_OTHER`
+   field in an attribute is a warning with the `htmlspecialchars()` fix.
+4. **Dynamic code and ORDER BY.** `${$k} = $v`, `extract($_POST)`, `eval()` are
+   errors; `' ORDER BY ' . $criteria->getSort()` and `setSort(Request::…)` are
+   warnings. Neither has a fix on purpose.
+5. **Deprecated core API.** `parent::XoopsObject()` → `parent::__construct()`,
+   `destoryVars()` → `destroyVars()`, `$tpl->assign_by_ref()` → `assignByRef()`
+   with Alt+Enter; `new XoopsTree`, `XOBJ_DTYPE_UNICODE_*`,
+   `xoops_getModuleOption()` and the `makeTboxData4*` family are explained,
+   not rewritten.
+6. **`$HTTP_POST_VARS`** is an error with a rename to `$_POST`.
+7. **Templates.** `{if $x}` or `{$var}` in a `.tpl` is an error with a
+   "Wrap in <{ }>" fix; `<{$smarty.get.op}>` gets "Add |escape".
+8. **Scope.** `assets/js/uploader.php` reading `$_POST` is reported (security
+   rules read bundled code); it gets no header, guard or status-line note
+   (convention rules skip it). `db:tag_bar.tpl` inside Publisher is silent.
 
-// after
-include_once XOOPS_ROOT_PATH . '/header.php';
-include_once __DIR__ . '/footer.php';
+## 5. Language-constant completion, 6. Live templates
+
+Unchanged from 0.3: type `_MI_` / `_AM_` / `_MD_` in a PHP file for completion
+from every `language/` directory; `xoguard`, `xofetch`, `xolang`, `xocriteria`,
+`xorequest` + Tab.
+
+## 7. Running the tests
+
+```
+./gradlew test
 ```
 
-**Quick-fix** rewrites the keyword in place. `require` / `require_once` are not touched; only a bare `include` of a `header.php` / `footer.php` path is reported.
+`XoopsQuickFixTest` copies each fixture tree into a light project, highlights
+the target file, asserts the problem count, applies every quick-fix of the
+family through the IDE (re-computed after each one, as a batch run does),
+compares the whole file with `*.after.php`, and asserts that a second pass
+offers no further fix. `PluginDescriptorTest` checks that every registered
+inspection instantiates, matches its `shortName` and has a description page.
 
-### 4.5 Direct-access guard — `XoopsRootPathGuard`
+## 8. Troubleshooting
 
-Reports include-only PHP files (classes, preloads, includes, blocks) that lack a terminating `defined('XOOPS_ROOT_PATH') || exit/die(...)` guard. The guard must be the first executable statement after `<?php`, `declare` and `namespace`; a `use` block before or after it is fine. `die` and `exit` are both accepted. In namespaced files the quick-fix inserts the guard **after** the namespace and before the `use` block (never before `namespace`, that is invalid PHP).
-
-Not reported: language files, vendor/cache, tests, `xoops_version.php`, `admin/` control-panel scripts, files whose first work is including `mainfile.php` / `header.php` / `admin_header.php`, and directory-protection stubs that only send HTTP 404/403.
-
-**Why.** Files under `class/`, `include/`, `preloads/`, `blocks/`, `kernel/` and `src/` are meant to be pulled in by a bootstrapped page. Requested directly over HTTP they run without a session, without `$xoopsUser`, and with every global undefined, which is how include files turn into information leaks or code paths that skip permission checks. The guard turns a direct request into a one-line exit.
-
-```php
-<?php
-
-namespace XoopsModules\Demo;
-
-defined('XOOPS_ROOT_PATH') || exit('Restricted access');
-
-use XoopsModules\Demo\Constants;
-
-class Accounts extends \XoopsObject
-{
-}
-```
-
-**Placement.** PHP requires `namespace` to be the first statement, but `use` imports may follow executable code, so the guard sits between them. That is also where the wgSimpleAcc family and most Goffy modules put it. `if (!defined('XOOPS_ROOT_PATH')) { exit('...'); }` is accepted as an equivalent form.
-
-**Why entry points are skipped.** A page that starts with `include mainfile.php` or `header.php` is bootstrapping itself and must be reachable over HTTP. `admin/` scripts include `admin_header.php` for the same reason. A guard on any of these would exit every public request. A 404/403 stub (`header('HTTP/1.0 404 Not Found');` and nothing else) is meant to answer direct requests, so a guard there would replace the intended HTTP status with "Restricted access".
-
-**Quick-fix limits.** The fix computes the insert offset from the file, so it works after `declare(strict_types=1)`, multiple `declare` statements, `namespace Foo;` and `namespace Foo { … }`, with both `<?php` and short `<?` tags. A file that starts with HTML before its first `<?php` is still reported, but the fix declines rather than guess where the guard belongs.
-
-### 4.6 `query()` vs `exec()` — `XoopsQueryExec`
-
-Flags string SQL starting with `INSERT` / `UPDATE` / `DELETE` / `REPLACE` / `TRUNCATE` / `ALTER` / `DROP` / `CREATE` passed to `->query()`. Use `exec()` for mutations (XOOPS 2.5.12+ convention).
-
-**Why.** Since 2.5.12 `query()` inspects the statement and blocks writes on a GET request, logging `query() called with a mutating statement; use exec()`. Code that worked on 2.5.11 silently stops writing on upgrade, and the only symptom is a log line. Splitting reads and writes at the call site also makes a future prepared-statement layer possible, because `exec()` never needs `$limit` / `$start`.
-
-```php
-// before
-$db->query('DELETE FROM ' . $db->prefix('news') . ' WHERE storyid = ' . $id);
-
-// after
-$db->exec('DELETE FROM ' . $db->prefix('news') . ' WHERE storyid = ' . $id);
-```
-
-**Quick-fix** renames `query` to `exec` when the call has a single argument. With `$limit` / `$start` present the problem is still reported, but the fix is withheld: `exec()` takes one argument, so the extra ones must be removed by hand first. SQL held in a variable is not inspected; only a string literal as the first argument is read.
-
-### 4.7 Raw superglobals — `XoopsSuperglobal`
-
-Flags raw `$_GET`, `$_POST`, `$_REQUEST`, and `$_COOKIE` in module and XMF code. Prefer `\Xmf\Request`.
-
-**Why.** `\Xmf\Request` does the type coercion, default handling and filtering that hand-written `isset($_POST['x']) ? (int) $_POST['x'] : 0` tends to get subtly wrong, and it makes the input source explicit. `$_REQUEST` merges GET, POST and COOKIE in `php.ini`-dependent order, so a cookie can override a form field; that is why the fix always names a source and never offers `$_REQUEST` as one.
-
-```php
-// before
-$op   = $_GET['op'];
-$name = $_POST['name'];
-
-// after
-$op   = \Xmf\Request::getString('op', '', 'GET');
-$name = \Xmf\Request::getString('name', '', 'POST');
-```
-
-**Quick-fix scope.** Only a **keyed** read with a string-literal key (`$_GET['op']`, `$_POST['name']`, `$_COOKIE['sid']`) gets an Alt+Enter replacement, and it always uses `getString`. Change it to `getInt`, `getBool`, `getArray` or `getCmd` afterwards when the value is not free text. A bare `$_POST` (passed to a function, iterated, or used with a variable key) and any use of `$_REQUEST` are warnings only, because the right method and source cannot be inferred.
-
-### 4.8 Missing registered template — `XoopsMissingRegisteredTemplate`
-
-A template listed in `xoops_version.php` (`file` / `template` key) was not found under the module `templates/` (or `blocks/`) directory. A case-only difference is reported as `TEMPLATE_CASE_MISMATCH`, with the actual disk spelling and no create-file quick-fix.
-
-**Why.** On install and update XOOPS reads `$modversion['templates']` and copies each listed file into the `tplfile` table. A missing file is skipped without an error, so the page or block later fails with a Smarty "unable to read resource" message that names a template you registered but never created, or that was renamed on disk without the manifest following.
-
-```php
-$modversion['templates'][] = [
-    'file'        => 'demo_index.tpl',   // must exist as templates/demo_index.tpl
-    'description' => 'Index page',
-];
-```
-
-Both template inspections read `xoops_version.php` only, so they cover legacy and hybrid modules; a `module.json`-only module is not checked.
-
-**Quick-fix** creates the file under `templates/`, keeping any sub-path in the name (`blocks/demo_block.tpl` becomes `templates/blocks/demo_block.tpl`), with a Smarty comment `<{* name *}>` as placeholder so the manifest and disk agree; fill in the markup afterwards. The inspection runs on `xoops_version.php` and is the inverse of 4.9.
-
-### 4.9 Unregistered template — `XoopsUnregisteredTemplate`
-
-A `.tpl` file under the module `templates/` or `blocks/` directory is not listed in `xoops_version.php`, so Smarty cannot `display()` it as a registered module template. Theme overrides under `themes/` are ignored. The quick-fix appends a `$modversion['templates'][]` entry to the manifest.
-
-**Why.** The `db:` template resource resolves through the `tplfile` table, and only registered templates get a row. An unregistered `.tpl` renders fine from the file system on a stock template set during development, then breaks on a site whose template set was imported, or on the first module update that resyncs templates. Registering it at creation time removes the surprise.
-
-**Matching.** A manifest entry may be spelled relative to `templates/` (`demo_index.tpl`, the XOOPS convention) or from the module root (`templates/demo_index.tpl`); both are accepted. Case-insensitive matching identifies the registration, but filename and directory spelling must match the disk exactly. The missing-template inspection and scanner report casing differences as a case mismatch, not a missing or unregistered template.
-
-**Quick-fix** appends this at the end of the manifest (before a trailing `?>` if there is one), unless the name is already quoted somewhere in the file:
-
-```php
-$modversion['templates'][] = [
-    'file' => 'demo_orphan.tpl',
-    'description' => '',
-];
-```
-
-Files under `themes/` and `templates_c/` are never reported: a theme override is not a module template, and compiled templates are generated.
-
-### 4.10 Wrong Smarty delimiters — `XoopsWrongSmartyDelimiter`
-
-XOOPS Smarty uses `<{` and `}>` delimiters. Bare `{if}` / `{$var}` tags are usually a mistake and will not render.
-
-**Why.** XOOPS configures Smarty with `<{` `}>` so that plain braces in CSS, JavaScript and JSON inside a template are left alone. A tag written in stock Smarty syntax is not an error: it is passed to the browser as literal text, so the symptom is `{$title}` appearing on the page, or an `{if}` block that always shows both branches.
-
-```smarty
-<!-- before -->
-{if $items}<ul>{foreach $items as $item}<li>{$item.title}</li>{/foreach}</ul>{/if}
-
-<!-- after -->
-<{if $items}><ul><{foreach $items as $item}><li><{$item.title}></li><{/foreach}></ul><{/if}>
-```
-
-**What is matched.** A brace immediately followed by `$` or by one of the common tag keywords (`if`, `/if`, `foreach`, `/foreach`, `include`, `assign`, `block`, `literal`) up to the closing brace on the same line. Tags already written as `<{ … }>` are skipped, and so are braces that do not look like a tag, which keeps inline CSS and JavaScript quiet.
-
-**Quick-fix** wraps the tag in `<{ }>`. Apply it per tag, or run **Code → Inspect Code** on the `templates/` folder and use **Apply fix** on the group to convert a whole template.
-
-## 5. Live templates
-
-In a PHP file, type the abbreviation and press **Tab**:
-
-| Abbreviation | Inserts |
-| --- | --- |
-| `xoguard` | `defined('XOOPS_ROOT_PATH') \|\| exit(...)` |
-| `xofetch` | query + isResultSet + fetchArray (`$this->db`) |
-| `xofetchdb` | same with `$db` |
-| `xohead` | PHPDoc file header |
-| `xolang` | `define('_MI_…')` |
-| `xocriteria` | CriteriaCompo stub |
-| `xorequest` | `\Xmf\Request::getString` |
-| `xoexec` | `$this->db->exec(...)` |
-
-## 6. Language constants
-
-Type `_MI_` (or `_AM_`, `_MD_`, `_CO_`, `_MB_`) and **Ctrl+Space** — completions from every `language/**/*.php` `define()`. **Ctrl+B** (Go to Declaration) on a constant jumps to the `define()` (prefers `language/english/`).
-
-## 7. New module
-
-**Tools → XOOPS Support → New XOOPS Module Stub…** or **New → XOOPS Module…**
-
-- **Legacy only** — `xoops_version.php`, `index.php`, language, template
-- **Hybrid** — plus `composer.json`, `src/Service/…`, `config/`, `AGENTS.md`
-
-## 8. Actions summary
-
-| Action | Purpose |
-| --- | --- |
-| Show XOOPS Project Info | Dialog: Core Version, web root, modules |
-| Refresh XOOPS Overview | Rescan + tool window |
-| New XOOPS Module Stub… | Scaffold module |
-
-## 9. Development (sandbox)
-
-```powershell
-.\gradlew.bat runIde
-# other terminal after edits:
-.\gradlew.bat buildPlugin --continuous
-```
-
-```bash
-./gradlew runIde
-# other terminal:
-./gradlew buildPlugin --continuous
-```
-
-Focus sandbox to hot-reload (not under debugger).
+- **Inspections not firing** — the file must be a PHP file inside the project
+  content root and not under `vendor/`, `assets/`, `cache/`, `templates_c/`.
+- **A fix does nothing** — every fix re-checks its precondition at apply time
+  and declines silently when an earlier edit already satisfied it; re-run
+  highlighting.
+- **After editing inspection code:** `shortName` in `plugin.xml` must equal the
+  class's simple name minus `Inspection`, and `inspectionDescriptions/<shortName>.html`
+  must exist — `PluginDescriptorTest` catches both.
