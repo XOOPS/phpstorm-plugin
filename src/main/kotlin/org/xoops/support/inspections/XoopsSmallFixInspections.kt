@@ -205,10 +205,9 @@ class XoopsUnlinkInspection : XoopsInspection() {
                 // object names the file, so `$info->isFile()` is the check (newbb FilesManagement, DirectoryIterator loops).
                 val target = Php.unwrap(arg).let { (it as? Variable)?.let(Php::resolveAssignment) ?: it } as? MethodReference
                 val receiver = target?.classReference?.text?.let(::normalize)
-                val spl = when {
-                    receiver == null -> emptyList()
-                    target?.name == "getRealPath" -> listOf(SPL_FILE + receiver)
-                    target?.name == "getPathname" -> listOf(SPL_FILE + receiver, SPL_LINK + receiver)
+                val spl = if (target == null || receiver == null) emptyList() else when (target.name) {
+                    "getRealPath" -> listOf(SPL_FILE + receiver)
+                    "getPathname" -> listOf(SPL_FILE + receiver, SPL_LINK + receiver)
                     else -> emptyList()
                 }
                 val keys = setOfNotNull(normalize(arg.text), alias?.let { normalize(it.text) }) + spl

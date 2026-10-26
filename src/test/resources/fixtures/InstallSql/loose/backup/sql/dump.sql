@@ -1,0 +1,5 @@
+--
+CREATE TABLE xoops_avatar (
+  avatar_id MEDIUMINT(8) UNSIGNED NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (avatar_id)
+) ENGINE=MyISAM;

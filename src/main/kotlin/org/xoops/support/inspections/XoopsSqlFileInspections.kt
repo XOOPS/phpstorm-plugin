@@ -17,8 +17,11 @@ import com.jetbrains.php.lang.psi.PhpFile
 import com.jetbrains.php.lang.psi.elements.ArrayAccessExpression
 import com.jetbrains.php.lang.psi.elements.ArrayHashElement
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
+import com.jetbrains.php.lang.psi.elements.BinaryExpression
+import com.jetbrains.php.lang.psi.elements.ConcatenationExpression
 import com.jetbrains.php.lang.psi.elements.SelfAssignmentExpression
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
+import com.jetbrains.php.lang.psi.elements.Variable
 import org.xoops.support.fix.XoopsFix
 import org.xoops.support.psi.XoopsPaths
 import java.nio.charset.StandardCharsets
@@ -31,6 +34,9 @@ import java.nio.charset.StandardCharsets
 
 /** Shared gate and text helpers for the SQL rules. */
 object InstallSql {
+    /** The module schema the installer runs when no `sqlfile` entry names another file. */
+    const val MODULE_SCHEMA = "mysql.sql"
+
     /** A finding on a text range of a non-PHP file; the plain range overload registered nothing in tests. */
     fun report(
         holder: ProblemsHolder, file: PsiFile, range: TextRange, message: String, onTheFly: Boolean,
@@ -56,13 +62,13 @@ object InstallSql {
      * `xoops_version.php` names, resolved from the module root (`sql/english/install.sql` is two levels down).
      * A `sql/` folder also holds Adminer / phpMyAdmin dumps and old upgrade scripts (newbb: `2510debug1.sql`,
      * `xoops_mysql.sql`, `mysql.400.sql`) that SqlUtility never sees; their engine, prefix and `--` lines are not
-     * findings. A file outside any module (the core's `install/sql/mysql.structure.sql`) belongs to the core
-     * installer and stays inspected.
+     * findings. Outside any module only the core installer's `install/sql/` schema stays inspected; any other
+     * loose `sql/` folder holds dumps too.
      */
     fun installerFile(file: PsiFile): Boolean {
         val vf = file.virtualFile ?: return true
-        val root = XoopsPaths.moduleRoot(vf) ?: return true
-        if (file.name.equals("mysql.sql", true)) return true
+        val root = XoopsPaths.moduleRoot(vf) ?: return XoopsPaths.path(file).contains("/install/sql/")
+        if (file.name.equals(MODULE_SCHEMA, true)) return true
         val manifestFile = root.findChild("xoops_version.php") ?: return false
         val manifest = PsiManager.getInstance(file.project).findFile(manifestFile) as? PhpFile ?: return false
         return sqlfilePaths(manifest).any { root.findFileByRelativePath(it.removePrefix("./")) == vf }
@@ -72,13 +78,14 @@ object InstallSql {
      * Every `.sql` path a `sqlfile` declaration of the manifest assigns, read from the PHP PSI, so comments,
      * strings, heredocs, `?>` and comparisons are the parser's business. `$modversion['sqlfile']['mysql'] = 'x'`,
      * `$modversion['sqlfile'][XOOPS_DB_TYPE] = 'x'`, `$modversion['sqlfile'] = ['pgsql' => 'y', 'mysql' => 'x']` and
-     * the array-manifest `'sqlfile' => ['mysql' => 'x']` (also `array(…)`) all count; every database entry is read.
+     * the array-manifest `$modversion = ['sqlfile' => ['mysql' => 'x']]` (also `array(…)`) all count; every database
+     * entry is read, and `'sql/' . 'install.sql'` is joined. Only `$modversion` declares: `$other['sqlfile']` does not.
      */
     fun sqlfilePaths(manifest: PhpFile): List<String> {
         val values = ArrayList<PsiElement>()
         for (a in PsiTreeUtil.findChildrenOfType(manifest, AssignmentExpression::class.java)) {
             // `.=` appends to a path set elsewhere; it is not the declaration.
-            if (a is SelfAssignmentExpression) continue
+            if (a is SelfAssignmentExpression || !isModversion(a.variable)) continue
             // Only the `[…]` chain being written counts: a `sqlfile` read inside an index, or a destructuring
             // target, does not make the right-hand side an installer file.
             var access = a.variable as? ArrayAccessExpression
@@ -86,15 +93,31 @@ object InstallSql {
             if (access != null) a.value?.let(values::add)
         }
         for (h in PsiTreeUtil.findChildrenOfType(manifest, ArrayHashElement::class.java)) {
-            if (isSqlfileKey(h.key)) h.value?.let(values::add)
+            // A top-level entry of the array assigned to `$modversion` itself.
+            val owner = h.parent?.parent as? AssignmentExpression
+            if (isSqlfileKey(h.key) && owner?.value === h.parent && isModversion(owner.variable)) h.value?.let(values::add)
         }
-        return values
-            .flatMap { listOfNotNull(it as? StringLiteralExpression) + PsiTreeUtil.findChildrenOfType(it, StringLiteralExpression::class.java) }
-            .map { it.contents }
-            .filter { it.endsWith(".sql", ignoreCase = true) }
+        return values.flatMap(::strings).filter { it.endsWith(".sql", ignoreCase = true) }
     }
 
     private fun isSqlfileKey(e: PsiElement?): Boolean = (e as? StringLiteralExpression)?.contents.equals("sqlfile", ignoreCase = true)
+
+    private fun isModversion(e: PsiElement?): Boolean {
+        var root = e
+        while (root is ArrayAccessExpression) root = root.value
+        return (root as? Variable)?.name == "modversion"
+    }
+
+    /** The constant string of a literal or a literal-only concatenation, else null. */
+    private fun constant(e: PsiElement?): String? = when (e) {
+        is StringLiteralExpression -> e.contents
+        is ConcatenationExpression -> constant(e.leftOperand)?.let { l -> constant(e.rightOperand)?.let { l + it } }
+        else -> null
+    }
+
+    /** Every constant string in an `sqlfile` value; a concatenation with a variable part names no file. */
+    private fun strings(e: PsiElement): List<String> =
+        constant(e)?.let(::listOf) ?: if (e is BinaryExpression) emptyList() else e.children.flatMap(::strings)
 
     /** `-- ` and `#` line comments and block comments blanked, offsets kept. */
     fun stripComments(text: String): String {
@@ -190,7 +213,7 @@ class XoopsUpdateCreatesTableInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         return object : PsiElementVisitor() {
             override fun visitFile(file: PsiFile) {
-                if (!InstallSql.isInstallerSql(file) || !file.name.equals("mysql.sql", true)) return
+                if (!InstallSql.isInstallerSql(file) || !file.name.equals(InstallSql.MODULE_SCHEMA, true)) return
                 val module = file.virtualFile?.parent?.parent ?: return
                 if (!installerRuns(module)) return
                 val updates = updateText(module) ?: return
@@ -225,7 +248,7 @@ class XoopsUpdateCreatesTableInspection : LocalInspectionTool() {
         }
         if (declared) return true
         return listOf("oninstall.php", "include/oninstall.php", "include/install.php").any { rel ->
-            InstallSql.read(module.findFileByRelativePath(rel))?.contains("mysql.sql") == true
+            InstallSql.read(module.findFileByRelativePath(rel))?.contains(InstallSql.MODULE_SCHEMA) == true
         }
     }
 

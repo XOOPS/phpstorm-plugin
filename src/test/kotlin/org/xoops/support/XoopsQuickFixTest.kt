@@ -357,6 +357,10 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
     fun testSqlFileCommentStillChecksTheCoreSchema() =
         checkSql(XoopsSqlFileCommentInspection(), "InstallSql/corecomment", "install/sql/mysql.structure.sql", 1)
 
+    /** A dump in a loose `sql/` folder, outside any module and outside `install/sql/`, is run by nothing. */
+    fun testSqlFileCommentIgnoresALooseDumpOutsideAnyModule() =
+        checkSql(XoopsSqlFileCommentInspection(), "InstallSql/loose", "backup/sql/dump.sql", 0)
+
     /** `sqlfile` naming `sql/english/install.sql` resolves from the module root, two levels above the file. */
     fun testInstallSqlChecksANestedSqlfileEntry() =
         checkSql(XoopsInstallSqlInspection(), "InstallSql/nested", "modules/demo/sql/english/install.sql", 1)
@@ -395,6 +399,14 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
         assertEquals(
             listOf("sql/live.sql"),
             paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/live.sql'; \$modversion['sqlfile']['mysql'] .= '.sql';"),
+        )
+        assertEquals(live, paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/' . 'live.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/' . \$lang . '.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$other['sqlfile']['mysql'] = 'sql/backup.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$backup = ['sqlfile' => ['mysql' => 'sql/backup.sql']];"))
+        assertEquals(
+            emptyList<String>(),
+            paths("<?php \$modversion['config'][] = ['name' => 'x', 'options' => ['sqlfile' => 'sql/backup.sql']];"),
         )
     }
 
