@@ -55,8 +55,18 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        <h3>Not released</h3>
+        <h3>1.0.0 Alpha 4 (1.0.0-alpha.4)</h3>
+        <p>A rebuild on the PHP PSI with 52 inspections (from 10). Every quick-fix is backed by a whole-file fixture
+        and applied twice (idempotence); the set was tuned on 224 modules and on six full runs over XoopsCore27
+        (2,241 findings down to 666, none of them in test trees, every remaining one checked against the source).</p>
         <ul>
+          <li>Core version gate: <code>isResultSet()</code> (2.5.11) and <code>exec()</code> (2.5.12) rewrites are offered only when the tree's <code>include/version.php</code> has them; older cores get <code>if (!$result)</code> and <code>queryF()</code>.</li>
+          <li>Direct-access guard recognises <code>throw</code>, compound conditions, status-line and <code>return</code> bodies; never guards an entry point or a bundled script that does not load XOOPS.</li>
+          <li>Superglobal rewrite leaves dynamic callees (<code>new $_REQUEST['c']()</code>) and non-XOOPS scripts (payment callbacks, bundled apps) alone; a <code>$_POST = …</code> write gets its own message.</li>
+          <li>Csrf recognises a dominating <code>$xoopsSecurity-&gt;check()</code> gate; Unlink recognises same-class helpers, <code>realpath()</code> aliases and files the script created itself; WeakToken treats an <code>md5()</code> password lookup as a migration path.</li>
+          <li>Template, language-constant and manifest rules skip <code>tests/</code>, <code>testdata/</code> and <code>fixtures/</code> trees; Smarty 5 rules stay silent on a core older than 2.8.</li>
+          <li>Bare <code>--</code> lines in installer SQL are blanked; <code>--text</code> becomes <code>-- text</code>. The fix works in Inspect Code batch apply and survives "Remove trailing spaces on save".</li>
+          <li><code>unserialize()</code> gets <code>allowed_classes</code> only where the result is used as an array.</li>
           <li>Six template inspections ported from the XOOPS 2.7.4 upgrade preflight, for <code>.tpl</code> and <code>.html</code> on 2.5.11+ cores:
             unquoted <code>xo*</code> plugin argument (<code>&lt;{xoAdminIcons home.png}&gt;</code> → <code>'home.png'</code>),
             <code>includeq</code> / <code>foreachq</code> → <code>include</code> / <code>foreach</code> and <code>&lt;{php}&gt;</code> reported,
@@ -69,17 +79,6 @@
             <code>class/xoopsobject.php</code>, <code>xoopsmodule.php</code>, <code>xoopsuser.php</code> and <code>mimetypes.inc.php</code> stubs moved to
             <code>kernel/</code> / <code>include/</code>; the eight deprecated <code>xoops_load()</code> short names (<code>'cache'</code> → <code>'xoopscache'</code> …);
             and a new inspection for <code>$xoopsOption[…]</code> inside a function without <code>global $xoopsOption</code>.</li>
-        </ul>
-        <h3>1.0.0 Alpha 4 (1.0.0-alpha.4)</h3>
-        <p>A rebuild on the PHP PSI. Every quick-fix is backed by a whole-file fixture and applied twice (idempotence);
-        the set was reviewed on 224 modules before release.</p>
-        <ul>
-          <li>45 inspections (from 10): bootstrap, database, security, templates, language files, installer SQL, deprecated core API.</li>
-          <li>Core version gate: <code>isResultSet()</code> (2.5.11) and <code>exec()</code> (2.5.12) rewrites are offered only when the tree's <code>include/version.php</code> has them; older cores get <code>if (!$result)</code> and <code>queryF()</code>.</li>
-          <li>Direct-access guard recognises <code>throw</code>, compound conditions, status-line and <code>return</code> bodies; never guards an entry point or a bundled script that does not load XOOPS.</li>
-          <li>Superglobal rewrite leaves dynamic callees (<code>new $_REQUEST['c']()</code>) and non-XOOPS scripts (payment callbacks, bundled apps) alone.</li>
-          <li>Bare <code>--</code> lines in installer SQL are blanked; <code>--text</code> becomes <code>-- text</code>. The fix works in Inspect Code batch apply and survives "Remove trailing spaces on save".</li>
-          <li><code>unserialize()</code> gets <code>allowed_classes</code> only where the result is used as an array.</li>
           <li>Dynamic install and update without restart (language-constant cache is a project service).</li>
           <li>Settings page (Core Version override, auto-scan, startup balloon), <b>New → XOOPS Module…</b> scaffold with a legacy or hybrid layout (Helper, PSR-4 autoloader, Xmf admin side) whose output passes every inspection, Tools → XOOPS Support menu, and Ctrl+B / Find Usages on language constants used as strings or in Smarty templates - all carried over from Alpha 3 and rebuilt.</li>
         </ul>

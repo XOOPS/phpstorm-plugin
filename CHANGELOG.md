@@ -4,7 +4,10 @@ Marketplace plugin `org.xoops.plugin.support`. Versions 0.4.0 to 0.7.2 below are
 rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 release of the previous code base
 (https://github.com/XOOPS/phpstorm-plugin).
 
-## 1.0.0-alpha.5 — not released
+## 1.0.0-alpha.4 — 1.0.0 Alpha 4 — Marketplace release 2026-10-26
+
+Alpha 4 as published: the rebuild below (2026-10-24) plus the refinement rounds that followed it, six full runs over
+XoopsCore27 with every remaining finding checked against the source.
 
 - **Build:** the Kotlin compiler runs with `-Xjvm-default=all`. Without it the compiled `XoopsToolWindowFactory`
   carried delegating stubs for every default method of the platform's `ToolWindowFactory` (`getAnchor`, `getIcon`,
@@ -113,7 +116,7 @@ original line prints `title='{Go to last post}'` (literal braces in the attribut
 text alone, so the finding and its fix stand (Grok, sixth time). `field.php:595` and `convertResultSet()` stay
 deliberate keeps (Codex).
 
-## 1.0.0-alpha.4 — 1.0.0 Alpha 4 — 2026-10-24
+## 1.0.0-alpha.4 — first cut of Alpha 4 — 2026-10-24
 
 Everything from 0.7.2 and below, under the published plugin id, name, vendor and icons. Added for continuity with
 Alpha 3: the `XoopsIncludeOnceHeader` inspection (`include` of header/footer.php → `include_once`), the live
