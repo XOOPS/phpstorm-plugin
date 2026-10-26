@@ -37,8 +37,10 @@ tour is the fixture tree the test-suite uses: copy
 and open the files — every `.php` next to a `.after.php` shows a highlighted
 problem whose Alt+Enter fix produces exactly the `.after.php` content.
 
-The rules that matter most, with what changed against the old text-based
-plugin:
+The complete list, with every rule's default level, what it reports, what its fix
+changes and when it stays silent, is **[INSPECTIONS.md](INSPECTIONS.md)**. This
+section walks through the rules that matter most, with what changed against the
+old text-based plugin:
 
 ### 4.1 XOOPS_ROOT_PATH guard
 

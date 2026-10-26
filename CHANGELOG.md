@@ -24,6 +24,8 @@ checked against the module source and pinned with a fixture.
   it there on PhpStorm 2024.3 and 2026.3.
 - **Build:** `gradlew test -PlocalIde=<PhpStorm install dir>` runs the suite against an installed IDE instead of the
   pinned 2024.3.5 platform, so a parser change in a newer PhpStorm is caught before a report comes in.
+- **Docs:** `INSPECTIONS.md` lists all 52 inspections with default level, what each reports, what its quick-fix
+  changes and when it stays silent. README and TUTORIAL link to it; the README's Alpha 3 era table is gone.
 
 ## 1.0.0-alpha.4 — 1.0.0 Alpha 4 — Marketplace release 2026-10-26
 

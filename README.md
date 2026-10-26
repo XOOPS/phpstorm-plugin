@@ -56,43 +56,14 @@ for the next restart. The plugin itself is unload-safe (every extension point it
 
 ## Inspections (Settings → Editor → Inspections → PHP → XOOPS)
 
-| Inspection | Fires on | Quick-fix |
-|---|---|---|
-| RootPathGuard | include-only file (class / preload / include / block) with no `defined('XOOPS_ROOT_PATH') \|\| exit` guard (the `if (!defined) { throw … }` and compound `\|\| !($GLOBALS['xoopsUser'] instanceof …)` forms count) — never an entry point, never `preloads/autoloader.php`, never a 404 stub | guard after `namespace`/`declare`, before `use` or the class docblock |
-| DoubleCpHeader | `xoops_cp_header()` after `require admin_header.php` **when that sibling file calls it** | delete the statement (excluded from Fix-all) |
-| FormLoader | class extends `XoopsForm*` and the file loads neither `XoopsFormLoader` nor the parent | `\xoops_load('XoopsFormLoader');` on its own line before the class docblock |
-| FileHeader | no comment in the first 4000 characters mentions `@license` / `license:` / `licensed under` / copyright; third-party and test trees, `xoops_version.php`, 404 stubs skipped | header after a same-line `declare`, only when the head has no comment at all |
-| LanguageLoad | `_MD_`/`_CO_`/`_AM_` used in a page that loads no catalog (`xoops_loadLanguage`, helper `loadLanguage`, header include) | — |
-| LanguageRole | `_MI_` outside modinfo.php etc.; one note per **non-canonical** file (`modinfo1.php`) | — |
-| DeprecatedDbApi | `queryF()` / `quoteString()` on a XOOPS database receiver (never an application wrapper, never inside a database class) | `exec()` for a resolved write, `query()` for a read, nothing when unknown; `if ($force)` ⇒ `exec()`; `quote()` |
-| MutatingQuery | `query()` on a database receiver whose SQL resolves to INSERT/UPDATE/DELETE/DDL (the same resolution makes such a `query()` a write for Csrf) | `exec()`; `queryF()` when the nearest ancestor `include/version.php` says the core is older than 2.5.12 (the same gate keeps `queryF()` unreported there and makes ResultSetGuard insert `if (!$result)` below 2.5.11) |
-| ResultSetGuard | `fetch*()` with no dominating `isResultSet()` (in-condition, early-exit, reassignment aware); reversed `if (!isResultSet)` and nested `fetch*($db->query())` get their own messages; legacy `if (!$r)` / `if (!$r = query())` / `false === $r` guards get a weak note | early `return` with the function's failure value, never `throw`; legacy guard rewritten in place to `isResultSet()` |
-| Superglobal | `$_GET`/`$_POST`/`$_COOKIE`/`$_REQUEST` in any file that boots XOOPS (names `xoops`, `mainfile.php` or `Xmf`), `assets/` endpoints included; a bundled script that never loads the core is skipped; writes, `empty()`, `=== null`, dynamic keys, bare arrays and dynamic callees (`new $_REQUEST['c']()`) reported without fix | accessor chosen from the use: `getArray()` (foreach, count, `[…]`, array-typed parameter, `XOBJ_DTYPE_ARRAY` field), `getInt()` (`(int)`, `intval()`, arithmetic), `getString()` (literal comparison, switch, array key), `getText()` (concatenation, echo, string functions, text fields — keeps HTML); `isset()` and a strict null comparison → `hasVar()`; `isset ? : 'd'` and `?? 'd'` keep the default; every other read, `empty()`, a loose null comparison and a bare `$_POST` get the byte-identical raw accessor `getVar(key, null, hash, 'none', MASK_ALLOW_RAW \| MASK_NO_TRIM)` / `get(hash, …)`; `$_REQUEST` is the library's `'default'` hash; three batch buttons |
-| LegacySuperglobal | `$HTTP_POST_VARS`, `$HTTP_GET_VARS` … (removed in PHP 5.4) | rename to `$_POST` / `$_GET` … |
-| AttributeEscape | `getVar()` inside an attribute or URL query per the preceding string literal, resolved against the field's `initVar()` DTYPE: numeric never, sanitised DTYPEs only with format `'n'`, `OTHER`/`SOURCE` always | `htmlspecialchars((string) <whole call>, ENT_QUOTES \| ENT_SUBSTITUTE, 'UTF-8')` / `rawurlencode()` |
-| DynamicCode | `$$name`, `${$name}`, `extract($_POST)`, `eval()`, `create_function()` | — |
-| OrderBy | `' ORDER BY ' . $criteria->getSort()`, `setSort(Request::…)` | — |
-| DeprecatedCoreApi | classes, functions, methods and `XOBJ_DTYPE_UNICODE_*` the 2.7.4 core marks `@deprecated`, plus PHP 4 constructor calls | rename only for same-signature replacements (`destoryVars`, `parent::XoopsObject()`, Smarty 2 names) |
-| Csrf | `switch ($op)` branch that writes with no token check; a POST-only gate does not cover a GET `$op` | — |
-| Unserialize | `unserialize($x)` with one argument (PSI count) | `, ['allowed_classes' => false]` |
-| GuestUser | `isset($xoopsUser)` with no `is_object`/`instanceof` in the same `&&` chain | `$xoopsUser instanceof \XoopsUser` |
-| Unlink | `unlink($p)` with no `is_file($p)` on the same expression | — |
-| Setcookie | `setcookie()` | `xoops_setcookie()` |
-| HttpStatus | `header('HTTP/1.0 404 …')` | `http_response_code(404)` |
-| ByRefArgument | temporary passed to a resolved by-reference parameter (`parent::__construct` resolves to the parent) | — |
-| MissingRegisteredTemplate | registration whose file is not where `xoops_module_gettemplate()` reads it: `templates/<type>/` for `admin` / `blocks` and every `$modversion['blocks']` entry, `templates/<file>` as written otherwise (`'type' => 'block'` is not a folder) | re-point at the existing file, relative to the folder the installer uses (no stubs) |
-| UnregisteredTemplate | module `.tpl` or `db:` include nobody registers — `system_*`, foreign prefixes (`db:tag_bar.tpl`), Smarty comments skipped | register in `xoops_version.php` (Alt+Enter only, never "Fix all") |
-| SmartyDelimiter | `{if …}` / `{$var}` in a `.tpl` without the XOOPS `<{ }>` delimiters (comments and `<{literal}>` masked) | wrap in `<{ }>` |
-| DoubleEncodedAmp | `&amp;` in a URL literal passed to `redirect_header()`, `header()`, `addItemButton()`, `->redirect()` | `&` |
-| StrictCalendarCast | `date()`/`substr()`/request string passed to `mktime()`, `checkdate()` … under `declare(strict_types=1)` | `(int)` cast |
-| LocaleConstant | `_AM_<DIRNAME>_X` … referenced but `define()`d nowhere in the project (PhpStorm index) | — |
-| DuplicateDefine | same constant `define()`d twice in one language file | delete an identical duplicate; a conflict is reported |
-| ThemeConstant | `define('THEME_…')` in a module language file | — |
-| MenuAutoload | `admin/menu.php` uses a `XoopsModules\…` class before any include | `require_once \dirname(__DIR__) . '/preloads/autoloader.php';` when that file exists |
-| HandlerSignature | `getObjects()` / `getAll()` override without `&` in a `XoopsPersistableObjectHandler` subclass (fatal at class load) | — |
-| SqlConcat | `$_GET[…]` / `Request::getString()` concatenated into the SQL reaching `query()`/`exec()` without `quote()`/`(int)` (`$sql` followed to its assignment) | — |
-| SqlComment | `xoops_version.php` names a `sql/*.sql` with a bare `--` line (installer skips the next CREATE TABLE) | a bare `--` line is blanked (a `-- ` would be stripped as trailing whitespace on save), `--text` becomes `-- text` |
-| SmartyRequestEscape | `<{$smarty.get.x}>` / `$smarty.request` / `$smarty.post` printed without `\|escape` | append `\|escape` |
+The plugin registers 52 inspections: security (CSRF, superglobals, SQL concatenation, escaping, tokens), the
+database layer (`queryF()`, `exec()` vs `query()`, `isResultSet()` guards, installer SQL), module files and
+bootstrap (`XOOPS_ROOT_PATH` guard, `admin/menu.php` autoloader, form loader, preload globals), templates and
+Smarty (delimiters, registration, Smarty 3 / 5 migrations), language files, and deprecated core APIs.
+
+**[INSPECTIONS.md](INSPECTIONS.md)** lists every one of them with its default level, what it reports, what the
+quick-fix changes and when it stays silent. It is written from the same descriptions PhpStorm shows in the
+inspection settings (`src/main/resources/inspectionDescriptions/`), so the two stay in step.
 
 Plus, unchanged from 0.3: project detection, the XOOPS tool window, language-constant
 completion and five live templates.
