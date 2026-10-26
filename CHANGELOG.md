@@ -4,7 +4,7 @@ Marketplace plugin `org.xoops.plugin.support`. Versions 0.4.0 to 0.7.2 below are
 rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 release of the previous code base
 (https://github.com/XOOPS/phpstorm-plugin).
 
-## 1.0.0-alpha.5 — 1.0.0 Alpha 5 — NOT RELEASED
+## 1.0.0-alpha.5 — 1.0.0 Alpha 5 — Marketplace release 2026-10-26
 
 False positives from a run over three newbb trees (`280test1/htdocs/modules/02/01inspections`, 2026-10-26), each
 checked against the module source and pinned with a fixture.

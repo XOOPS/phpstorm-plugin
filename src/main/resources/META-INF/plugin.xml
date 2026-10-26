@@ -55,6 +55,16 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.0.0 Alpha 5 (1.0.0-alpha.5)</h3>
+        <p>False positives found on three newbb trees, each pinned with a fixture.</p>
+        <ul>
+          <li>InstallSql and SqlFileComment check only the file the installer runs: the one an active <code>$modversion['sqlfile']</code> entry names, or <code>sql/mysql.sql</code> when none is named. Database dumps and old upgrade scripts beside it are no longer reported, and an entry set to <code>false</code> switches the check off.</li>
+          <li>DeprecatedCoreApi no longer reports a module handler's own <code>synchronization()</code>.</li>
+          <li>Unlink accepts an <code>SplFileInfo</code> check (<code>isFile()</code> before <code>getRealPath()</code> / <code>getPathname()</code>, <code>isLink()</code> before <code>getPathname()</code>).</li>
+          <li>UnregisteredTemplate and MissingRegisteredTemplate skip test trees.</li>
+          <li>MenuAutoload inserts the require above <code>declare(strict_types=1)</code> and leaves a <code>bootstrap.php</code> that already loads the autoloader alone.</li>
+          <li><code>INSPECTIONS.md</code> lists all 52 inspections with level, quick-fix and when each stays silent; the UpdateCreatesTable description is rewritten in plain words.</li>
+        </ul>
         <h3>1.0.0 Alpha 4 (1.0.0-alpha.4)</h3>
         <p>A rebuild on the PHP PSI with 52 inspections (from 10). Every quick-fix is backed by a whole-file fixture
         and applied twice (idempotence); the set was tuned on 224 modules and on six full runs over XoopsCore27

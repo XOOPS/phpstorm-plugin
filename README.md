@@ -73,7 +73,7 @@ completion and five live templates.
 ```
 cd phpstorm-plugin
 ./gradlew test            # golden-file suite + descriptor consistency
-./gradlew buildPlugin     # build/distributions/xoops-support-1.0.0-alpha.4.zip
+./gradlew buildPlugin     # build/distributions/xoops-support-1.0.0-alpha.5.zip
 ./gradlew runIde          # sandboxed PhpStorm with the plugin installed
 ```
 
