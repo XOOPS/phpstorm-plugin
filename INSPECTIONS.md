@@ -224,8 +224,19 @@ silently writes nothing. Hard-coded prefix: `xoops_`, `{prefix}` and `%s` are no
 installer schema under `install/sql/`. Report only.
 
 ### XoopsUpdateCreatesTable — CREATE TABLE that no module update path creates
-A `CREATE TABLE` in `sql/mysql.sql` that no update path mentions is never created for a module that is already
-installed; sites updating from a version that shipped without it fail with error 1146. Update paths searched:
+XOOPS runs `sql/mysql.sql` only on a fresh install. When a site updates a module it already has, that file is not
+run again, so a table added in a later version must also be created by the module's update code.
+
+Example: version 1.0 ships tables `a` and `b`, and version 1.1 adds table `c` to `mysql.sql`. A new install of 1.1
+gets all three. A site updating from 1.0 still has only `a` and `b`, and the first page that uses `c` fails with MySQL
+error 1146 (table doesn't exist). xnewsletter's `include/onupdate.php` shows the fix: one update step per version that
+added a table, each creating it if it is missing.
+
+This note marks every `CREATE TABLE` that no update code mentions. The plugin cannot tell whether the table is new.
+If it has existed since the module's first release, every site already has it and the note can be ignored. If it was
+added later, add a create-if-missing step to the update code. That is why it is only a weak note.
+
+Update paths searched:
 `onupdate.php`, `include/onupdate.php`, `include/update.php`, `include/install.php` and every YAML under `sql/`. An
 update that re-runs the SQL file or calls `createMissingTables()` / `synchronizeSchema()` covers every table. Modules
 without any update callback are not reported, nor is an SQL file the installer never runs (`sqlfile` commented out or

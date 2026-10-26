@@ -37,7 +37,9 @@ checked against the module source and pinned with a fixture.
   pinned 2024.3.5 platform, so a parser change in a newer PhpStorm is caught before a report comes in.
 - **Docs:** `INSPECTIONS.md` lists all 52 inspections with default level, what each reports, what its quick-fix
   changes and when it stays silent. README and TUTORIAL link to it; the README's Alpha 3 era table is gone. The
-  tutorial no longer claims that `assets/js/` is read by the security rules: that tree is excluded.
+  tutorial no longer claims that `assets/js/` is read by the security rules: that tree is excluded. The
+  **UpdateCreatesTable** description is rewritten in plain words, with a version 1.0 / 1.1 example and xnewsletter's
+  `include/onupdate.php` as the pattern to follow.
 - **Tools:** `tools/gen_descriptions.py` is rebuilt from the shipped description pages and reproduces all 52 byte
   for byte. It had 35 entries, 12 of them shorter than the pages edited since and two under retired short names, so
   running it would have overwritten reviewed descriptions.
