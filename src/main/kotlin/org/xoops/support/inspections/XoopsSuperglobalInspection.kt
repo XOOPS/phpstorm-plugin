@@ -594,7 +594,7 @@ class XoopsSuperglobalInspection : XoopsInspection() {
                                     else -> return null
                                 }
                                 fname != null && fname in identifierFunctions -> identifier = true
-                                fname != null && stringPositions[fname] != null -> if (index in stringPositions[fname]!!) text = true else return null
+                                fname != null && fname in stringPositions -> if (stringPositions[fname]?.contains(index) == true) text = true else return null
                                 call is MethodReference && call.name == "setVar" && index == 1 -> when (dtypeKind(call)) {
                                     Kind.ARRAY -> array = true
                                     Kind.TEXT -> text = true
