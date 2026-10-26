@@ -1,0 +1,6 @@
+<?php
+/**
+ * @copyright   XOOPS Project (https://xoops.org)
+ * @license     GPL-2.0-or-later (https://www.gnu.org/licenses/gpl-2.0.html)
+ */ $title = 'x'; ?>
+<h1><?= $title ?> on XOOPS</h1>
