@@ -9,7 +9,8 @@ plugins {
 group = "org.xoops"
 // `-PbuildNumber=N` appends a build number (1.0.0-alpha.4.N): PhpStorm only hot-swaps an installed plugin when the
 // incoming version is newer, so a dev build installed over the same version string always asks for a restart.
-version = "1.0.0-alpha.4" + (findProperty("buildNumber")?.let { ".$it" } ?: "")
+// The release workflow checks the git tag against `pluginVersion` in gradle.properties, so that is the one place it lives.
+version = providers.gradleProperty("pluginVersion").get() + (findProperty("buildNumber")?.let { ".$it" } ?: "")
 
 repositories {
     mavenCentral()
