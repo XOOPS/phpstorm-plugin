@@ -1,0 +1,56 @@
+# CodeQL for the Kotlin sources. GitHub's default code-scanning setup analyses Java/Kotlin in "none" build mode,
+# which cannot process Kotlin, so every push to master failed with "could not process any of it". This advanced
+# setup compiles the plugin with Gradle first. Default setup must be switched off in the repository settings
+# (Code security > Code scanning) or GitHub rejects the upload from this workflow.
+# Third-party actions are pinned to full commit SHAs.
+name: CodeQL
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+
+      - name: Compile
+        run: |
+          chmod +x ./gradlew
+          ./gradlew compileKotlin --no-daemon --stacktrace
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          category: "/language:java-kotlin"
