@@ -14,7 +14,8 @@ checked against the module source and pinned with a fixture.
 - **InstallSql** and **SqlFileComment** look only at the file the installer runs: the file an active `sqlfile`
   entry names, resolved from the module root (so `sql/english/install.sql` counts, in both the
   `$modversion['sqlfile']['mysql']` and the array-manifest form, with every database entry of an array read), or
-  `sql/mysql.sql` when the manifest names no file. A leftover `sql/mysql.sql` beside a selected
+  `sql/mysql.sql` when the manifest names no file or builds one at runtime
+  (`'sql/' . XOOPS_DB_TYPE . '.sql'`). A leftover `sql/mysql.sql` beside a selected
   `sql/english/install.sql` is not run and not checked. The manifest is read through the PHP parser, not as text:
   a commented-out declaration, a string or nowdoc that looks like one, a comparison against `sqlfile`, a `sqlfile`
   key on any variable other than `$modversion`, and a nested key such as `$modversion['config']['sqlfile']` do not

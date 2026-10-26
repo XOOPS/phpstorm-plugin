@@ -373,6 +373,10 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
     fun testInstallSqlIgnoresMysqlSqlWhenTheManifestSelectsAnotherFile() =
         checkSql(XoopsInstallSqlInspection(), "InstallSql/nested", "modules/demo/sql/mysql.sql", 0)
 
+    /** A MySQL path built at runtime may be `sql/mysql.sql`: a literal pgsql entry must not hide it. */
+    fun testInstallSqlKeepsTheDefaultBesideARuntimePath() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/partial", "modules/demo/sql/mysql.sql", 1)
+
     /** The array manifest form: `'sqlfile' => ['mysql' => 'sql/english/install.sql']`. */
     fun testInstallSqlChecksTheArrayManifestSqlfile() =
         checkSql(XoopsInstallSqlInspection(), "InstallSql/arraymanifest", "modules/demo/sql/english/install.sql", 1)

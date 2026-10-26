@@ -72,8 +72,11 @@ object InstallSql {
         val root = XoopsPaths.moduleRoot(vf) ?: return XoopsPaths.path(file).contains("/install/sql/")
         val manifest = root.findChild("xoops_version.php")
             ?.let { PsiManager.getInstance(file.project).findFile(it) as? PhpFile }
-        val declared = manifest?.let(::sqlfilePaths).orEmpty()
-        if (declared.isNotEmpty()) return declared.any { root.findFileByRelativePath(it.removePrefix("./")) == vf }
+        val entries = manifest?.let(::sqlfileEntries).orEmpty()
+        val declared = entries.filterNotNull()
+        if (declared.any { root.findFileByRelativePath(it.removePrefix("./")) == vf }) return true
+        // A path built at runtime may be the default one, so a partly resolved list keeps the fallback.
+        if (declared.isNotEmpty() && null !in entries) return false
         return vf == root.findFileByRelativePath("sql/$MODULE_SCHEMA")
     }
 
@@ -86,7 +89,10 @@ object InstallSql {
      * `$other['sqlfile']` and `$modversion['config']['sqlfile']` do not. An outer array assigned to `$modversion` may
      * sit inside a call (`array_merge($defaults, [...])`).
      */
-    fun sqlfilePaths(manifest: PhpFile): List<String> {
+    fun sqlfilePaths(manifest: PhpFile): List<String> = sqlfileEntries(manifest).filterNotNull()
+
+    /** The declared paths, with null for each value built at runtime (`'sql/' . XOOPS_DB_TYPE . '.sql'`). */
+    private fun sqlfileEntries(manifest: PhpFile): List<String?> {
         val values = ArrayList<PsiElement>()
         for (a in PsiTreeUtil.findChildrenOfType(manifest, AssignmentExpression::class.java)) {
             // `.=` appends to a path set elsewhere; it is not the declaration.
@@ -104,7 +110,7 @@ object InstallSql {
             val nested = PsiTreeUtil.getParentOfType(h.parent, ArrayCreationExpression::class.java, true, AssignmentExpression::class.java)
             if (nested == null && isModversion(owner.variable)) h.value?.let(values::add)
         }
-        return values.flatMap(::strings).filter { it.endsWith(".sql", ignoreCase = true) }
+        return values.flatMap(::strings).filter { it == null || it.endsWith(".sql", ignoreCase = true) }
     }
 
     private fun isSqlfileKey(e: PsiElement?): Boolean = (e as? StringLiteralExpression)?.contents.equals("sqlfile", ignoreCase = true)
@@ -118,9 +124,12 @@ object InstallSql {
         else -> null
     }
 
-    /** Every constant string in an `sqlfile` value; a concatenation with a variable part names no file. */
-    private fun strings(e: PsiElement): List<String> =
-        constant(e)?.let(::listOf) ?: if (e is BinaryExpression) emptyList() else e.children.flatMap(::strings)
+    /** Every constant string in an `sqlfile` value, and null for a part built at runtime (variable, constant, call). */
+    private fun strings(e: PsiElement): List<String?> = constant(e)?.let(::listOf) ?: when {
+        e is ArrayHashElement -> e.value?.let(::strings).orEmpty()
+        e is BinaryExpression || e.children.isEmpty() -> listOf(null)
+        else -> e.children.flatMap(::strings)
+    }
 
     /** `-- ` and `#` line comments and block comments blanked, offsets kept. */
     fun stripComments(text: String): String {
