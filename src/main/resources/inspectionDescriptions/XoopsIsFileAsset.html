@@ -1,5 +1,6 @@
 <!doctype html>
-<html>
+<html lang="en">
+<head><title>XOOPS: Is File Asset</title></head>
 <body>
 <p><code>file_exists($x)</code> and <code>is_readable($x)</code> are true for a directory. When the condition's body then includes <code>$x</code> or reads it with <code>readfile()</code>, <code>file_get_contents()</code>, <code>fopen()</code> or similar, a directory name reaches the reader.</p><p>The fix appends <code>&amp;&amp; is_file($x)</code>: it only narrows the condition. A negated check (<code>!file_exists($x)</code>) is reported without a fix, because <code>!a &amp;&amp; b</code> would invert it.</p>
 </body>
