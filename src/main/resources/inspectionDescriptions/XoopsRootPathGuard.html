@@ -1,20 +1,15 @@
 <!doctype html>
 <html>
 <body>
-Reports <b>include-only</b> PHP files (classes, preloads, includes, blocks) that lack a
-terminating <code>defined('XOOPS_ROOT_PATH') || exit/die(...)</code> guard.
-<p>
-The guard must be the first executable statement after <code>&lt;?php</code>,
-<code>declare</code> and <code>namespace</code>; a <code>use</code> block before or
-after it is fine. <code>die</code> and <code>exit</code> are both accepted.
-In namespaced files the quick-fix inserts the guard <em>after</em> the namespace and
-before the <code>use</code> block (never before <code>namespace</code>, that is invalid PHP).
-</p>
-<p>
-Not reported: language files, vendor/cache, tests, <code>xoops_version.php</code>,
-<code>admin/</code> control-panel scripts, files whose first work is including
-<code>mainfile.php</code> / <code>header.php</code> / <code>admin_header.php</code>,
-and directory-protection stubs that only send HTTP 404/403.
-</p>
+Include-only PHP files (classes, preloads, includes, blocks) start with
+<pre>defined('XOOPS_ROOT_PATH') || exit('Restricted access');</pre>
+<p>A file that bootstraps the core itself &mdash; any top-level <code>require</code> of
+<code>mainfile.php</code>, <code>header.php</code>, <code>cp_header.php</code>,
+<code>admin_header.php</code>, <code>print.php</code> &hellip; &mdash; is a public entry point and is
+never reported, even when <code>error_reporting()</code> or flag assignments precede that require.
+<code>preloads/autoloader.php</code>, language files, tests, 404 stubs and fully qualified
+<code>\defined()</code> guards are recognised.</p>
+<p>The quick-fix inserts the guard after <code>namespace</code> / <code>declare</code> and before
+<code>use</code> or the class docblock, on its own line.</p>
 </body>
 </html>

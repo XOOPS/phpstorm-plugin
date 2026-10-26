@@ -1,7 +1,10 @@
 <!doctype html>
 <html>
 <body>
-A template listed in <code>xoops_version.php</code> (<code>file</code> / <code>template</code> key)
-was not found under the module <code>templates/</code> (or <code>blocks/</code>) directory.
+A template registered in <code>xoops_version.php</code> is not where the installer will read it:
+<code>type =&gt; admin|blocks</code> adds that folder, every other type (including an invented
+<code>partial</code>) is <code>templates/{file}</code> as written.
+<p>When a file with that name exists elsewhere under <code>templates/</code>, the fix points the
+registration at it. No empty stub is ever created.</p>
 </body>
 </html>

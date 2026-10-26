@@ -1,13 +1,10 @@
 <!doctype html>
-<html lang="en">
-<head>
-<title>Unregistered XOOPS template</title>
-</head>
+<html>
 <body>
-A <code>.tpl</code> file under the module <code>templates/</code> or <code>blocks/</code>
-directory is not listed in <code>xoops_version.php</code>, so Smarty cannot
-<code>display()</code> it as a registered module template.
-<p>Theme overrides under <code>themes/</code> are ignored.</p>
-<p>Quick-fix appends a <code>$modversion['templates'][]</code> entry to the manifest.</p>
+A module <code>.tpl</code> the manifest does not know, or a <code>db:</code> include nobody registers.
+<p>Core <code>system_*</code> templates, templates whose prefix belongs to another module
+(<code>db:tag_bar.tpl</code> inside Publisher) and includes inside a Smarty comment are not reported.
+Registering a template changes what the installer stores, so the fix is an explicit Alt+Enter and
+never part of "Fix all".</p>
 </body>
 </html>

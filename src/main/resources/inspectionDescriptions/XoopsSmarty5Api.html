@@ -1,0 +1,6 @@
+<!doctype html>
+<html>
+<body>
+<p>Smarty 5 removed <code>assignByRef()</code>, <code>appendByRef()</code>, the <code>register_*()</code> family and the public <code>template_dir</code> / <code>compile_dir</code> properties, and has no global <code>\Smarty</code> class (core 2.8 templates are <code>\XoopsTpl</code>, which extends <code>\Smarty\Smarty</code>).</p><p><code>assignByRef($k, $v)</code> → <code>assign($k, $v)</code> is offered only when <code>$v</code> is never written again in its scope — then by-reference and by-value assignment are the same thing. Everything else is reported for a hand rewrite.</p><p>Smarty 5 ships with core 2.8: on a 2.5 / 2.7 tree (Smarty 2 / 4, detected from <code>include/version.php</code> or the Core Version setting) these calls are the current API and nothing is reported. A standalone module without a core is checked.</p>
+</body>
+</html>

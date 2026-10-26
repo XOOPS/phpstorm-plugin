@@ -1,7 +1,10 @@
 <!doctype html>
 <html>
 <body>
-Flags string SQL starting with INSERT/UPDATE/DELETE/… passed to <code>-&gt;query()</code>.
-Use <code>exec()</code> for mutations (XOOPS 2.5.12+ convention).
+<code>query()</code> with an INSERT / UPDATE / DELETE / DDL statement: the safe database class refuses it
+on GET and strict mode warns on POST. Use <code>exec()</code>.
+<p>Only a statement whose SQL resolves to a write is reported &mdash; an unreadable <code>$sql</code> is not
+a finding. <code>$force ? $db-&gt;exec($sql) : $db-&gt;query($sql)</code> is the deliberate GET gate of a
+non-forced write and is left alone.</p>
 </body>
 </html>

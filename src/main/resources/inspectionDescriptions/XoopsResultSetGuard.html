@@ -1,16 +1,17 @@
 <!doctype html>
 <html>
 <body>
-Warns when <code>fetchArray</code> / <code>fetchRow</code> / <code>fetchBoth</code> appears without a
-dominating <code>isResultSet</code> check. Prefer the two-part guard:
-<pre>if (!$db-&gt;isResultSet($result) || !$result instanceof \mysqli_result) {
-    throw new \RuntimeException('Database query failed');
-}</pre>
-<p>
-An early-exit guard covers later fetches of the same variable, including
-<code>while (list(...) = $db-&gt;fetchRow($result))</code>, until that variable is reassigned.
-The quick-fix inserts before the enclosing statement using the current PSI
-(safe to apply several times after Inspect Code).
-</p>
+<code>fetchArray()</code> / <code>fetchRow()</code> / <code>fetchBoth()</code> on a handle that no
+<code>isResultSet()</code> check dominates.
+<p>Recognised guards: a positive check in the enclosing <code>if</code> / <code>while</code> condition
+(including <code>while ($db-&gt;isResultSet($r) &amp;&amp; $row = &hellip;)</code>), an early-exit
+<code>if (!$db-&gt;isResultSet($r))</code> or <code>if (!$r)</code> in a preceding statement, until the
+handle is reassigned. An early exit may also end in <code>break</code> / <code>continue</code>; a check in
+the same expression guards too (<code>isResultSet($r) &amp;&amp; &hellip; ? fetch($r) : false</code>,
+<code>isResultSet($r) &amp;&amp; &hellip; &amp;&amp; fetch($r)</code>), and a handle the function receives as a
+parameter is the caller's to guard. A fetch inside <code>if (!$db-&gt;isResultSet($r)) { &hellip; }</code> is a reversed
+condition and gets its own message.</p>
+<p>The fix inserts an early return that keeps the enclosing function's failure contract
+(<code>[]</code>, <code>0</code>, <code>false</code>, <code>null</code>) &mdash; never a <code>throw</code>.</p>
 </body>
 </html>

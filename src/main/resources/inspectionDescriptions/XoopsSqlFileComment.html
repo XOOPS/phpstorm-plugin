@@ -1,0 +1,6 @@
+<!doctype html>
+<html>
+<body>
+<p>A line that is exactly <code>--</code> is not a comment for <code>SqlUtility::splitMySqlFile()</code>; only <code>-- </code> (dash dash space) and <code>#</code> are. The bare line stays glued to the next statement, <code>prefixQuery()</code> fails its <code>^CREATE TABLE</code> match and the installer skips that table with no error.</p><p>One finding per line. The fix inserts the space on that line only, re-checking the live line text, so it is safe in any batch order. The same defect is also reported on <code>xoops_version.php</code> by "Bare -- comment in the SQL file".</p>
+</body>
+</html>

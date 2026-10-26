@@ -1,7 +1,15 @@
 <!doctype html>
 <html>
 <body>
-Flags raw <code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>, and <code>$_COOKIE</code>
-in module and XMF code. Prefer <code>\Xmf\Request</code>.
+Raw <code>$_GET</code> / <code>$_POST</code> / <code>$_COOKIE</code> reads go through <code>Xmf\Request</code>;
+<code>$_REQUEST</code> is banned outright.
+<p>The rewrite is offered only where it preserves meaning: a keyed read becomes
+<code>Request::getString('key', '', 'POST')</code>, a keyed <code>isset()</code> becomes
+<code>Request::hasVar()</code>. A write, <code>unset()</code>, <code>empty()</code>, a <code>=== null</code>
+comparison, a dynamic key or a bare <code>$_POST</code> are reported without a fix. An assignment to <code>$_POST</code> itself
+gets its own message: it changes what every later reader sees, <code>Xmf\Request</code> included, which may be the point.</p>
+<p>Not inspected: Protector (the request firewall rewrites the raw superglobals before XOOPS boots), the core installer and upgrader (they run before the
+xoops_lib path is known, so <code>Xmf\Request</code> cannot load) and, like
+every security rule, test trees (<code>tests/</code>, <code>test/</code>, <code>testdata/</code>, <code>fixtures/</code>).</p>
 </body>
 </html>

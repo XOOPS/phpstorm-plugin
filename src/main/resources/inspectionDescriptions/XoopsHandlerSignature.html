@@ -1,0 +1,9 @@
+<!doctype html>
+<html>
+<body>
+A handler extending <code>XoopsPersistableObjectHandler</code> / <code>XoopsObjectHandler</code> must declare
+<code>&amp;getObjects(…)</code> and <code>&amp;getAll(…)</code>: the kernel returns by reference and PHP refuses an
+incompatible override at class load. Reported only — adding <code>&amp;</code> also requires
+<code>return $var;</code> instead of <code>return [];</code>.</p>
+</body>
+</html>

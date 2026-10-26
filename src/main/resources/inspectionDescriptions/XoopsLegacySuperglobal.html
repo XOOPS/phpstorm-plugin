@@ -1,0 +1,9 @@
+<!doctype html>
+<html>
+<body>
+<code>$HTTP_POST_VARS</code>, <code>$HTTP_GET_VARS</code> and the other long arrays were removed in PHP 5.4:
+the page reads <code>null</code>.
+<p>The fix renames the variable to its <code>$_POST</code> / <code>$_GET</code> counterpart; the raw
+superglobal inspection then takes over.</p>
+</body>
+</html>

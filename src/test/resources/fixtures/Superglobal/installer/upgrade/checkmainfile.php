@@ -1,0 +1,2 @@
+<?php
+// Upgrader bootstrap marker.

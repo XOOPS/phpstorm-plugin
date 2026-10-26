@@ -1,17 +1,15 @@
-import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
-
-fun prop(key: String): String =
-    providers.gradleProperty(key).orNull
-        ?: error("Missing gradle.properties key: $key")
 
 plugins {
     id("java")
+    id("org.jetbrains.kotlin.jvm") version "2.4.10"
     id("org.jetbrains.intellij.platform") version "2.18.1"
 }
 
-group = prop("pluginGroup")
-version = prop("pluginVersion")
+group = "org.xoops"
+// `-PbuildNumber=N` appends a build number (1.0.0-alpha.4.N): PhpStorm only hot-swaps an installed plugin when the
+// incoming version is newer, so a dev build installed over the same version string always asks for a restart.
+version = "1.0.0-alpha.4" + (findProperty("buildNumber")?.let { ".$it" } ?: "")
 
 repositories {
     mavenCentral()
@@ -22,49 +20,28 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        phpstorm(prop("platformVersion"))
+        phpstorm("2024.3.5")
         bundledPlugin("com.jetbrains.php")
-        pluginVerifier()
         testFramework(TestFrameworkType.Platform)
     }
     testImplementation("junit:junit:4.13.2")
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+intellijPlatform {
+    autoReload = true
+    buildSearchableOptions = false
+    instrumentCode = false
+
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = "243"
+            untilBuild = provider { null }
+        }
     }
 }
 
-intellijPlatform {
-    instrumentCode = false
-    // Keep false for sandbox auto-reload and single-instance CI safety.
-    buildSearchableOptions = false
-    autoReload = true
-
-    pluginConfiguration {
-        // Keep version in sync with gradle.properties (description/change-notes stay in plugin.xml).
-        version = prop("pluginVersion")
-        ideaVersion {
-            sinceBuild = prop("pluginSinceBuild")
-            // Open-ended when pluginUntilBuild is blank — required for PhpStorm 2026.2+ installs.
-            // https://plugins.jetbrains.com/docs/intellij/build-number-ranges.html
-            val until = prop("pluginUntilBuild").trim()
-            if (until.isEmpty()) {
-                untilBuild = provider { null }
-            } else {
-                untilBuild = until
-            }
-        }
-    }
-
-    pluginVerification {
-        ides {
-            // PhpStorm only. Verifying IntelliJ IDEA (IU) without the PHP plugin
-            // yields a false Critical: "missing mandatory dependency com.jetbrains.php".
-            create(IntelliJPlatformType.PhpStorm, prop("platformVersion"))
-        }
-    }
+kotlin {
+    jvmToolchain(21)
 }
 
 tasks {
@@ -72,19 +49,7 @@ tasks {
         options.encoding = "UTF-8"
         options.release.set(21)
     }
-
-    wrapper {
-        gradleVersion = prop("gradleVersion")
-    }
-
     test {
         useJUnit()
-    }
-
-    runIde {
-        autoReload = true
-        jvmArgumentProviders += CommandLineArgumentProvider {
-            listOf("-XX:+UnlockDiagnosticVMOptions")
-        }
     }
 }

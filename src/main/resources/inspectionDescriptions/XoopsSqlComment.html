@@ -1,0 +1,10 @@
+<!doctype html>
+<html>
+<body>
+The module installer treats a line of <code>sql/*.sql</code> as a comment only when it starts with
+<code>-- </code> (dash, dash, space) or <code>#</code>. A bare <code>--</code> or <code>--text</code> stays glued
+to the next statement, the <code>CREATE TABLE</code> prefixer then fails, and that table is silently never
+created. The SQL file is checked from the <code>$modversion['sqlfile']</code> entry in
+<code>xoops_version.php</code>; the fix inserts the space in the SQL file.</p>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<body>
+A <code>switch ($op)</code> branch that writes (handler insert / delete, <code>exec()</code>, file writes)
+without a CSRF token check.
+<p>A branch is covered by its own <code>$GLOBALS['xoopsSecurity']-&gt;check()</code> or
+<code>xoops_confirm()</code> (directly or through a function of the same file that checks and stops), by a
+top-level gate before the switch, or by an <code>if (!$GLOBALS['xoopsSecurity']-&gt;check())</code> before it
+that exits or resets <code>$op</code> for the branch's value: <code>if (in_array($op, ['save', 'delete'])) {
+if (!…-&gt;check()) { … } }</code>. A gate behind any other condition, in an <code>else</code> or a loop covers
+nothing; a gate that only runs for POST covers nothing when <code>$op</code> is read from GET and the GET
+path still reaches the switch. The branch content decides, never the case label.</p>
+</body>
+</html>

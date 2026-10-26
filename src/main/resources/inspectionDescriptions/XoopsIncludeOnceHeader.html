@@ -1,7 +1,11 @@
-<!doctype html>
 <html>
 <body>
-XOOPS module entry points should load <code>header.php</code> / <code>footer.php</code>
-with <code>include_once</code> (not bare <code>include</code>).
+<p>Reports <code>include</code> or <code>require</code> of <code>header.php</code> / <code>footer.php</code>
+without the <code>_once</code> form.</p>
+<p>The core header defines functions and starts the theme. When the same request reaches it twice
+through different include paths, PHP stops with a "cannot redeclare" fatal. The quick-fix renames the
+keyword to <code>include_once</code> / <code>require_once</code> and changes nothing else.</p>
+<!-- tooltip end -->
+<p>Carried over from XOOPS Support 1.0.0 Alpha 3.</p>
 </body>
 </html>

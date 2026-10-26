@@ -1,7 +1,10 @@
 <!doctype html>
 <html>
 <body>
-XOOPS Smarty uses <code>&lt;{</code> and <code>}&gt;</code> delimiters.
-Bare <code>{if}</code> / <code>{$var}</code> tags are usually a mistake and will not render.
+XOOPS compiles Smarty with <code>&lt;{</code> <code>}&gt;</code> delimiters: a bare <code>{if $x}</code> or
+<code>{$var}</code> is printed literally.
+<p>Comments (<code>&lt;{* *}&gt;</code>) and <code>&lt;{literal}&gt;</code> blocks are masked; CSS and JavaScript
+braces do not match because only Smarty keywords and <code>{$…}</code> are looked for. The fix wraps the
+tag in <code>&lt;{ }&gt;</code>.</p>
 </body>
 </html>

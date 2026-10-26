@@ -1,0 +1,2 @@
+<?php
+$modversion['name'] = 'Demo';
