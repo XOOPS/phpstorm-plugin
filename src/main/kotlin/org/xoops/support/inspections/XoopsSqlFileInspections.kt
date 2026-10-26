@@ -42,6 +42,17 @@ object InstallSql {
         return p.endsWith(".sql") && p.contains("/sql/") && !XoopsPaths.isExcluded(file) && !XoopsPaths.isTestTree(file)
     }
 
+    /**
+     * The installer runs the file: `mysql.sql`, or any file the manifest names. A `sql/` folder also holds
+     * Adminer / phpMyAdmin dumps and old upgrade scripts (newbb: `2510debug1.sql`, `xoops_mysql.sql`,
+     * `mysql.400.sql`) that SqlUtility never sees; their engine, prefix and `--` lines are not findings.
+     */
+    fun installerFile(file: PsiFile): Boolean {
+        if (file.name.equals("mysql.sql", true)) return true
+        val manifest = read(file.virtualFile?.parent?.parent?.findChild("xoops_version.php")) ?: return false
+        return manifest.contains(file.name, ignoreCase = true)
+    }
+
     /** `-- ` and `#` line comments and block comments blanked, offsets kept. */
     fun stripComments(text: String): String {
         val out = StringBuilder(text.length)
@@ -89,7 +100,7 @@ class XoopsInstallSqlInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         return object : PsiElementVisitor() {
             override fun visitFile(file: PsiFile) {
-                if (!InstallSql.isInstallerSql(file)) return
+                if (!InstallSql.isInstallerSql(file) || !InstallSql.installerFile(file)) return
                 val code = InstallSql.stripComments(file.text)
                 for (m in foreignKey.findAll(code)) {
                     InstallSql.report(
@@ -204,7 +215,7 @@ class XoopsSqlFileCommentInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         return object : PsiElementVisitor() {
             override fun visitFile(file: PsiFile) {
-                if (!InstallSql.isInstallerSql(file)) return
+                if (!InstallSql.isInstallerSql(file) || !InstallSql.installerFile(file)) return
                 val text = file.text
                 for (offset in SqlCommentText.bareComments(text)) {
                     val line = text.substring(0, offset).count { it == '\n' }

@@ -21,7 +21,9 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        phpstorm("2024.3.5")
+        // `-PlocalIde=<PhpStorm install dir>` runs the suite against an installed IDE (newer parser, same tests).
+        val localIde = findProperty("localIde")?.toString()
+        if (localIde != null) local(localIde) else phpstorm("2024.3.5")
         bundledPlugin("com.jetbrains.php")
         testFramework(TestFrameworkType.Platform)
     }

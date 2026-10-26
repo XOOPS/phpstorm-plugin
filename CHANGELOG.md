@@ -4,6 +4,27 @@ Marketplace plugin `org.xoops.plugin.support`. Versions 0.4.0 to 0.7.2 below are
 rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 release of the previous code base
 (https://github.com/XOOPS/phpstorm-plugin).
 
+## 1.0.0-alpha.5 — 1.0.0 Alpha 5 — NOT RELEASED
+
+False positives from a run over three newbb trees (`280test1/htdocs/modules/02/01inspections`, 2026-10-26), each
+checked against the module source and pinned with a fixture.
+
+- **DeprecatedCoreApi** no longer names `synchronization()`: it is the module handlers' own method (newbb reports 99
+  calls), and the core's `XoopsPersistableObjectHandler::synchronization()` carries no `@deprecated` tag either.
+- **InstallSql** and **SqlFileComment** look only at the file the installer runs: `sql/mysql.sql`, or a file the
+  manifest names. Adminer / phpMyAdmin dumps and old upgrade scripts beside it (`2510debug1.sql`, `xoops_mysql.sql`,
+  `mysql.400.sql`) are never split by SqlUtility, so their MyISAM engine, `xoops_` prefixes and bare `--` lines were
+  237 + 111 findings about files nothing executes.
+- **Unlink** accepts an `SplFileInfo` check: `$info->isFile()` (or `isLink()`) dominating
+  `unlink($info->getRealPath())`, or a variable assigned from `$info->getPathname()`, is the is_file() check.
+- **MenuAutoload** gains fixtures for `<?php declare(strict_types=1);` on the open-tag line, a header-comment block,
+  a `bootstrap.php` require that already loads the autoloader (no finding), and newbb's real file with two spaces after
+  `<?php` and CRLF line endings. The Marketplace Alpha 4 jar put the require right after `<?php` on such a file
+  (`<?phprequire_once …` ahead of `declare`); this code base inserts above the loading statement, and the fixtures hold
+  it there on PhpStorm 2024.3 and 2026.3.
+- **Build:** `gradlew test -PlocalIde=<PhpStorm install dir>` runs the suite against an installed IDE instead of the
+  pinned 2024.3.5 platform, so a parser change in a newer PhpStorm is caught before a report comes in.
+
 ## 1.0.0-alpha.4 — 1.0.0 Alpha 4 — Marketplace release 2026-10-26
 
 Alpha 4 as published: the rebuild below (2026-10-24) plus the refinement rounds that followed it, six full runs over

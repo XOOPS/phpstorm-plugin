@@ -201,7 +201,11 @@ class XoopsUnlinkInspection : XoopsInspection() {
                 // `$resolved = realpath($x)` names the file `$x` names: a check on either path counts.
                 val alias = ((Php.unwrap(arg) as? Variable)?.let(Php::resolveAssignment) as? FunctionReference)
                     ?.takeIf { Php.isCall(it, "realpath") && it !is MethodReference }?.parameters?.firstOrNull()
-                val keys = setOfNotNull(normalize(arg.text), alias?.let { normalize(it.text) })
+                // `unlink($info->getRealPath())`, or `$name = $info->getPathname(); unlink($name)`: the SplFileInfo
+                // object names the file, so `$info->isFile()` is the check (newbb FilesManagement, DirectoryIterator loops).
+                val target = Php.unwrap(arg).let { (it as? Variable)?.let(Php::resolveAssignment) ?: it }
+                val spl = (target as? MethodReference)?.takeIf { it.name in splPaths }?.classReference?.text?.let { SPL + normalize(it) }
+                val keys = setOfNotNull(normalize(arg.text), alias?.let { normalize(it.text) }, spl)
                 if (dominated(reference, keys)) return
                 holder.registerProblem(
                     reference as PsiElement,
@@ -214,8 +218,12 @@ class XoopsUnlinkInspection : XoopsInspection() {
 
     private fun normalize(text: String) = text.replace(Regex("\\s+"), "")
 
+    private val splPaths = setOf("getRealPath", "getPathname", "getPath")
+    private val SPL = "spl:"
+
     private fun checks(scope: PsiElement, keys: Set<String>): List<FunctionReference> =
         Php.calls(scope, "is_file", "file_exists", "is_link").filter { c -> c.parameters.firstOrNull()?.let { normalize(it.text) } in keys } +
+            Php.methodCalls(scope, "isFile", "isLink").filter { c -> c.classReference?.text?.let { SPL + normalize(it) } in keys } +
             PsiTreeUtil.collectElementsOfType(scope, MethodReference::class.java).filter { helperChecks(it, keys) }
 
     /**

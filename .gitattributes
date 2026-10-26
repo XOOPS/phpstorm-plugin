@@ -4,3 +4,5 @@
 *.png binary
 *.svg text
 gradlew text eol=lf
+# newbb fixture kept byte for byte: two spaces after <?php and CRLF line endings are the point of the test
+src/test/resources/fixtures/MenuAutoload/crlf/** -text

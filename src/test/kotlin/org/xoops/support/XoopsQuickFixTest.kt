@@ -339,6 +339,13 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
     fun testUnlinkGuardedByWholeExpression() =
         check(XoopsUnlinkInspection(), "Unlink/unlink", "modules/demo/include/onupdate.php", 1)
 
+    /** `$info->isFile()` guards `unlink($info->getRealPath())` and `$name = $info->getPathname(); unlink($name)`. */
+    fun testUnlinkGuardedBySplFileInfoIsFile() =
+        check(XoopsUnlinkInspection(), "Unlink/spl", "modules/demo/class/Cleaner.php", 1)
+
+    fun testInstallSqlIgnoresDumpsTheInstallerNeverRuns() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/fk", "modules/demo/sql/dump.sql", 0)
+
     fun testByRefResolvesParentConstructor() =
         check(XoopsByRefArgumentInspection(), "ByRefArgument/byref", "modules/demo/class/Form/CategoryForm.php", 1)
 
@@ -513,6 +520,22 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
 
     fun testMenuGetsAutoloaderBeforeHelper() =
         check(XoopsMenuAutoloadInspection(), "MenuAutoload/menu", "modules/demo/admin/menu.php", 1,
+            "Require preloads", "modules/demo/admin/menu.after.php")
+
+    fun testMenuWithStrictTypesGetsAutoloaderBeforeHelper() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/strict", "modules/demo/admin/menu.php", 1,
+            "Require preloads", "modules/demo/admin/menu.after.php")
+
+    fun testMenuWithStrictTypesAndBootstrapRequireIsFine() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/bootstrap", "modules/demo/admin/menu.php", 0)
+
+    fun testMenuWithStrictTypesHeaderCommentsGetsAutoloaderBeforeHelper() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/tagstyle", "modules/demo/admin/menu.php", 1,
+            "Require preloads", "modules/demo/admin/menu.after.php")
+
+    /** newbb's real menu.php: two spaces after the open tag, CRLF line endings, the Helper call several statements down. */
+    fun testMenuWithCrlfAndDoubleSpacedDeclareGetsAutoloaderBeforeHelper() =
+        check(XoopsMenuAutoloadInspection(), "MenuAutoload/crlf", "modules/demo/admin/menu.php", 1,
             "Require preloads", "modules/demo/admin/menu.after.php")
 
     fun testClassConstantDoesNotLoadTheClass() =
