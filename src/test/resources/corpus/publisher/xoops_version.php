@@ -1,0 +1,2 @@
+<?php
+$modversion["dirname"] = "publisher";

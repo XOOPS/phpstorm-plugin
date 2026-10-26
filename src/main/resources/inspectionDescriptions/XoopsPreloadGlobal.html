@@ -1,0 +1,6 @@
+<!doctype html>
+<html>
+<body>
+<p>A file under <code>preloads/</code> runs inside every module's request. Assigning <code>$xoopsModule</code> or <code>$xoopsModuleConfig</code> there (or declaring them <code>global</code>, the prelude to it) repoints every later reader on the page to the wrong module: "Division by zero", null config keys, in a module that has nothing to do with the preload. Inside a function, <code>$xoopsModule = …</code> is a local unless the function declares it <code>global</code>; <code>$xoopsModule = $GLOBALS['xoopsModule'] ?? null;</code> is a read and is not reported.</p><p>Report only. Load the preload's own config into a local: <code>$cfg = xoops_getHandler('config')-&gt;getConfigsByCat(0, $mod-&gt;getVar('mid'))</code>.</p>
+</body>
+</html>

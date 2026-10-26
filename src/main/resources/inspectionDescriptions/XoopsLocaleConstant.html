@@ -1,0 +1,10 @@
+<!doctype html>
+<html>
+<body>
+<code>_AM_&lt;DIRNAME&gt;_X</code>, <code>_MD_…</code>, <code>_MI_…</code>, <code>_MB_…</code>, <code>_CO_…</code>
+referenced in the module but <code>define()</code>d in none of its language files: PHP 8 throws
+<code>Error: Undefined constant</code> where PHP 7 printed the constant's name.
+<p>Only constants carrying the module's own dirname are checked, against PhpStorm's index of every
+<code>define()</code> in the project. Reported without a fix.</p>
+</body>
+</html>

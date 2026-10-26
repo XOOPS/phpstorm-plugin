@@ -1,0 +1,9 @@
+<!doctype html>
+<html>
+<body>
+<code>isset($xoopsUser)</code> is true for a guest (the global is <code>''</code>). Test
+<code>$xoopsUser instanceof \XoopsUser</code>. A condition that already joins the isset with
+<code>is_object($xoopsUser)</code> or <code>instanceof</code> is not reported: <code>isset($u) &amp;&amp; is_object($u)</code>,
+or its De Morgan form <code>!isset($u) || !is_object($u)</code>.
+</body>
+</html>

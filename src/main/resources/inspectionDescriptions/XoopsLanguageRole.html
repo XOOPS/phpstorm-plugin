@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<body>
+Language catalogs: <code>_MI_</code> in modinfo.php, <code>_AM_</code> in admin.php, <code>_MD_</code> in
+main.php, <code>_MB_</code> in blocks.php, <code>_CO_</code> in common.php.
+<p>A canonical file with a foreign prefix gets one note per constant. A non-canonical file
+(<code>modinfo1.php</code>, a backup copy) gets one file-level note, unless some code loads it by name
+(<code>xoops_loadLanguage('cpanel', 'system')</code>).</p>
+<p>Only a module's own catalogs directly under <code>language/&lt;lang&gt;/</code> are checked: the core's
+<code>htdocs/language/</code>, the <code>Frameworks/</code> libraries (moduleadmin ships a xoops_version.php but loads its <code>main.php</code> by path) and sub-catalogs such as
+<code>language/&lt;lang&gt;/admin/&lt;page&gt;.php</code> follow their own loaders. <code>_MD_AM_</code> (system)
+and <code>_MD_A_</code> (Protector, D3) are admin constants by name and belong in admin.php.</p>
+</body>
+</html>

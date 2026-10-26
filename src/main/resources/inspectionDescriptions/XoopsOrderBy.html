@@ -1,0 +1,10 @@
+<!doctype html>
+<html>
+<body>
+<code>' ORDER BY ' . $criteria-&gt;getSort()</code> concatenates whatever <code>setSort()</code> received;
+<code>setSort(Request::getString('sort'))</code> hands the column to the client.
+<p>Quoting does not help: a column is an identifier, not a string. Allow-list the column or use
+<code>XoopsObject::buildOrderBy()</code>. Reported without a fix. <code>getSort()</code> passed to
+<code>buildOrderBy()</code> is allow-listed and not reported.</p>
+</body>
+</html>

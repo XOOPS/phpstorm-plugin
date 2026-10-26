@@ -1,0 +1,10 @@
+<!doctype html>
+<html>
+<body>
+<code>$_GET['id']</code>, <code>$_POST[…]</code>, <code>$_REQUEST[…]</code> or <code>Request::getString()</code>
+concatenated into the SQL that reaches <code>query()</code> / <code>exec()</code> / <code>queryF()</code>, with
+no <code>quote()</code>, <code>(int)</code> or <code>intval()</code> around it. The <code>$sql</code> variable is
+followed back to its assignment in the same block. Reported only: the right fix (quote, cast or allow-list)
+depends on the column.</p>
+</body>
+</html>

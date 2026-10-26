@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+<body>
+<code>&lt;{xoAdminIcons home.png}&gt;</code>: since Smarty 3 (XOOPS 2.5.11) a bare plugin argument is parsed as
+an expression and the template does not compile.
+<p>The fix quotes it: <code>&lt;{xoAdminIcons 'home.png'}&gt;</code>. Single quotes are used everywhere, also
+inside a single-quoted HTML attribute, because Smarty removes the whole tag before the browser sees it and most
+<code>compiler.xo*.php</code> plugins strip only <code>'</code>.</p>
+<p>Not reported on cores older than 2.5.11, where the argument had to be bare.</p>
+</body>
+</html>
