@@ -11,12 +11,22 @@ checked against the module source and pinned with a fixture.
 
 - **DeprecatedCoreApi** no longer names `synchronization()`: it is the module handlers' own method (newbb reports 99
   calls), and the core's `XoopsPersistableObjectHandler::synchronization()` carries no `@deprecated` tag either.
-- **InstallSql** and **SqlFileComment** look only at the file the installer runs: `sql/mysql.sql`, or a file the
-  manifest names. Adminer / phpMyAdmin dumps and old upgrade scripts beside it (`2510debug1.sql`, `xoops_mysql.sql`,
-  `mysql.400.sql`) are never split by SqlUtility, so their MyISAM engine, `xoops_` prefixes and bare `--` lines were
-  237 + 111 findings about files nothing executes.
-- **Unlink** accepts an `SplFileInfo` check: `$info->isFile()` (or `isLink()`) dominating
-  `unlink($info->getRealPath())`, or a variable assigned from `$info->getPathname()`, is the is_file() check.
+- **InstallSql** and **SqlFileComment** look only at the file the installer runs: a module's `sql/mysql.sql`, or the
+  file an active `sqlfile` entry names, resolved from the module root (so `sql/english/install.sql` counts, in both
+  the `$modversion['sqlfile']['mysql']` and the array-manifest form, with every database entry of an array read).
+  The manifest is read through the PHP parser, not as text: a commented-out declaration, a string or nowdoc that
+  looks like one, and a comparison name nothing, while a declaration behind an inline comment, after `?>`, or with a
+  multi-line `[XOOPS_DB_TYPE]` index still counts. Adminer / phpMyAdmin dumps and old upgrade
+  scripts beside it (`2510debug1.sql`, `xoops_mysql.sql`, `mysql.400.sql`) are never split by SqlUtility, so their
+  MyISAM engine, `xoops_` prefixes and bare `--` lines were 237 + 111 findings about files nothing executes. A file a
+  comment merely mentions is not an installer file. The core's own `install/sql/` schema has no module manifest and
+  stays inspected.
+- **Unlink** accepts an `SplFileInfo` check: `$info->isFile()` dominating `unlink($info->getRealPath())`, or a
+  variable assigned from `$info->getPathname()`, is the is_file() check, and `$info->isLink()` guards
+  `unlink($info->getPathname())` (the link itself, also when it dangles). `isFile()` before `getPath()` (the parent
+  directory) and `isLink()` before `getRealPath()` (the link's target) are still reported.
+- **UnregisteredTemplate** and **MissingRegisteredTemplate** skip test trees like every other rule; a `db:` include
+  in `tests/example.tpl` was reported as an unregistered template.
 - **MenuAutoload** gains fixtures for `<?php declare(strict_types=1);` on the open-tag line, a header-comment block,
   a `bootstrap.php` require that already loads the autoloader (no finding), and newbb's real file with two spaces after
   `<?php` and CRLF line endings. The Marketplace Alpha 4 jar put the require right after `<?php` on such a file
@@ -25,7 +35,11 @@ checked against the module source and pinned with a fixture.
 - **Build:** `gradlew test -PlocalIde=<PhpStorm install dir>` runs the suite against an installed IDE instead of the
   pinned 2024.3.5 platform, so a parser change in a newer PhpStorm is caught before a report comes in.
 - **Docs:** `INSPECTIONS.md` lists all 52 inspections with default level, what each reports, what its quick-fix
-  changes and when it stays silent. README and TUTORIAL link to it; the README's Alpha 3 era table is gone.
+  changes and when it stays silent. README and TUTORIAL link to it; the README's Alpha 3 era table is gone. The
+  tutorial no longer claims that `assets/js/` is read by the security rules: that tree is excluded.
+- **Tools:** `tools/gen_descriptions.py` is rebuilt from the shipped description pages and reproduces all 52 byte
+  for byte. It had 35 entries, 12 of them shorter than the pages edited since and two under retired short names, so
+  running it would have overwritten reviewed descriptions.
 
 ## 1.0.0-alpha.4 — 1.0.0 Alpha 4 — Marketplace release 2026-10-26
 

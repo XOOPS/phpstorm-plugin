@@ -1,4 +1,6 @@
 -- Adminer 4.6.3 MySQL dump
+--
+-- a phpMyAdmin-style separator: bare, but the installer never reads this file
 
 SET NAMES utf8;
 

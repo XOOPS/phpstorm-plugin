@@ -150,9 +150,11 @@ creating a stub; skip `system_*`, other modules and Smarty comments).
 6. **`$HTTP_POST_VARS`** is an error with a rename to `$_POST`.
 7. **Templates.** `{if $x}` or `{$var}` in a `.tpl` is an error with a
    "Wrap in <{ }>" fix; `<{$smarty.get.op}>` gets "Add |escape".
-8. **Scope.** `assets/js/uploader.php` reading `$_POST` is reported (security
+8. **Scope.** `assets/uploader.php` reading `$_POST` is reported (security
    rules read bundled code); it gets no header, guard or status-line note
-   (convention rules skip it). `db:tag_bar.tpl` inside Publisher is silent.
+   (convention rules skip it). Anything under `assets/js/` is not inspected
+   at all, nor are `tests/` and `vendor/`. `db:tag_bar.tpl` inside Publisher
+   is silent.
 
 ## 5. Language-constant completion, 6. Live templates
 

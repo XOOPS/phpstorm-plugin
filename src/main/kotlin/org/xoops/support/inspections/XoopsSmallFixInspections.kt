@@ -203,9 +203,15 @@ class XoopsUnlinkInspection : XoopsInspection() {
                     ?.takeIf { Php.isCall(it, "realpath") && it !is MethodReference }?.parameters?.firstOrNull()
                 // `unlink($info->getRealPath())`, or `$name = $info->getPathname(); unlink($name)`: the SplFileInfo
                 // object names the file, so `$info->isFile()` is the check (newbb FilesManagement, DirectoryIterator loops).
-                val target = Php.unwrap(arg).let { (it as? Variable)?.let(Php::resolveAssignment) ?: it }
-                val spl = (target as? MethodReference)?.takeIf { it.name in splPaths }?.classReference?.text?.let { SPL + normalize(it) }
-                val keys = setOfNotNull(normalize(arg.text), alias?.let { normalize(it.text) }, spl)
+                val target = Php.unwrap(arg).let { (it as? Variable)?.let(Php::resolveAssignment) ?: it } as? MethodReference
+                val receiver = target?.classReference?.text?.let(::normalize)
+                val spl = when {
+                    receiver == null -> emptyList()
+                    target?.name == "getRealPath" -> listOf(SPL_FILE + receiver)
+                    target?.name == "getPathname" -> listOf(SPL_FILE + receiver, SPL_LINK + receiver)
+                    else -> emptyList()
+                }
+                val keys = setOfNotNull(normalize(arg.text), alias?.let { normalize(it.text) }) + spl
                 if (dominated(reference, keys)) return
                 holder.registerProblem(
                     reference as PsiElement,
@@ -218,12 +224,16 @@ class XoopsUnlinkInspection : XoopsInspection() {
 
     private fun normalize(text: String) = text.replace(Regex("\\s+"), "")
 
-    private val splPaths = setOf("getRealPath", "getPathname", "getPath")
-    private val SPL = "spl:"
+    // An SplFileInfo check covers the accessor that returns the entry it checked. isFile() covers getRealPath() and
+    // getPathname(); isLink() covers only getPathname() (the link itself), because getRealPath() resolves to the
+    // target. getPath() is the containing directory and is covered by neither.
+    private val SPL_FILE = "spl-file:"
+    private val SPL_LINK = "spl-link:"
 
     private fun checks(scope: PsiElement, keys: Set<String>): List<FunctionReference> =
         Php.calls(scope, "is_file", "file_exists", "is_link").filter { c -> c.parameters.firstOrNull()?.let { normalize(it.text) } in keys } +
-            Php.methodCalls(scope, "isFile", "isLink").filter { c -> c.classReference?.text?.let { SPL + normalize(it) } in keys } +
+            Php.methodCalls(scope, "isFile").filter { c -> c.classReference?.text?.let { SPL_FILE + normalize(it) } in keys } +
+            Php.methodCalls(scope, "isLink").filter { c -> c.classReference?.text?.let { SPL_LINK + normalize(it) } in keys } +
             PsiTreeUtil.collectElementsOfType(scope, MethodReference::class.java).filter { helperChecks(it, keys) }
 
     /**

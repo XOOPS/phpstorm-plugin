@@ -11,8 +11,12 @@ Conventions used throughout:
   make (which column to allow-list, whether a table is old enough to need no update path).
 - A fix that is **Alt+Enter only** is offered in the editor but excluded from "Fix all" and the batch Inspect Code
   run, because applying it blindly can change behaviour.
-- **Test trees** (`tests/`, `test/`, `testdata/`, `fixtures/`), `assets/js/`, `jpgraph/` and `00/` are skipped by
-  every rule; third-party and vendor code is skipped by the rules that say so.
+- **Never inspected** by any rule: test trees (`tests/`, `test/`, `testdata/`, `fixtures/`) and vendored,
+  generated or scratch trees (`vendor/`, `templates_c/`, `cache/`, `uploads/`, `xoops_data/`, `node_modules/`,
+  `assets/js/`, `jpgraph`, `00/`).
+- **Bundled third-party code** (`assets/`, `libraries/`, `lib/`, `js/`, `jquery/`, `ckeditor/`, `tinymce/`,
+  `pear/`) is read by the security rules and skipped by the convention rules (file header, root-path guard,
+  `xoops_setcookie()`, status line).
 - **Core version** gating reads `include/version.php` of the project, or the Core Version setting when the module is
   opened standalone. Rules that only matter on core 2.8 (Smarty 5) stay silent on a 2.5 / 2.7 tree.
 
@@ -204,14 +208,16 @@ statement, the CREATE TABLE prefixer fails, and that table is silently never cre
 **Fix:** inserts the space in the SQL file.
 
 ### XoopsSqlFileComment — Bare '--' comment line in installer SQL
-The same defect reported on the SQL file itself, one finding per line, for the file the installer runs
-(`sql/mysql.sql` or a file the manifest names; dumps and old upgrade scripts in the same folder are skipped).
+The same defect reported on the SQL file itself, one finding per line, for the file the installer runs: a module's
+`sql/mysql.sql`, the file an active `sqlfile` entry names (resolved from the module root, so
+`sql/english/install.sql` counts), or the core's own `install/sql/` schema. Dumps and old upgrade scripts in a
+module's `sql/` folder are skipped, as is a file only a comment mentions.
 **Fix:** inserts the space on that line only, re-checking the live line text, so it is safe in any batch order. A line
 that is exactly `--` is blanked rather than given a trailing space, which "strip trailing spaces on save" would remove
 again.
 
 ### XoopsInstallSql — Installer SQL the installer cannot run
-Rules on the file the installer runs. `FOREIGN KEY … REFERENCES`: `SqlUtility::prefixQuery()` prefixes only the
+Rules on the file the installer runs, chosen as for XoopsSqlFileComment above. `FOREIGN KEY … REFERENCES`: `SqlUtility::prefixQuery()` prefixes only the
 table being created, never the REFERENCES target, so the key dangles; a plain INSERT fails with 1452, an INSERT IGNORE
 silently writes nothing. Hard-coded prefix: `xoops_`, `{prefix}` and `%s` are not installer tokens. `ENGINE=MyISAM`
 (weak): no transactions, no row locks; InnoDB has supported FULLTEXT since MySQL 5.6. Not reported on the core
@@ -296,8 +302,10 @@ without the tag (third-party MIT / GPL prose) is only noted, never rewritten.
 `unlink($path)` with no `is_file()` / `file_exists()` on the same expression dominating it. A check in the enclosing
 `if`, a preceding early exit at any block level up to the function, a previous `try` whose every catch exits, a
 `$this->exists()`-style helper that checks the same `$this->…` path, a check on `$x` when the unlinked path is
-`realpath($x)`, an `SplFileInfo` object's `isFile()` / `isLink()` when its `getRealPath()` / `getPathname()` is
-unlinked, and `if (false === file_put_contents($p, …)) return;` all count. A check behind an unrelated `&&` does not.
+`realpath($x)`, an `SplFileInfo` object's `isFile()` when its `getRealPath()` or `getPathname()` is unlinked
+(directly or through a variable), its `isLink()` when `getPathname()` (the link itself) is unlinked, and
+`if (false === file_put_contents($p, …)) return;` all count. A check behind an unrelated `&&` does not, nor does
+`isFile()` before `getPath()` (the containing directory) or `isLink()` before `getRealPath()` (the link's target).
 Report only.
 
 ### XoopsIsFileAsset — file_exists() / is_readable() accepts a directory before a file read

@@ -8,8 +8,17 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
+import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.php.lang.psi.PhpFile
+import com.jetbrains.php.lang.psi.elements.ArrayAccessExpression
+import com.jetbrains.php.lang.psi.elements.ArrayHashElement
+import com.jetbrains.php.lang.psi.elements.AssignmentExpression
+import com.jetbrains.php.lang.psi.elements.SelfAssignmentExpression
+import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
 import org.xoops.support.fix.XoopsFix
 import org.xoops.support.psi.XoopsPaths
 import java.nio.charset.StandardCharsets
@@ -43,15 +52,49 @@ object InstallSql {
     }
 
     /**
-     * The installer runs the file: `mysql.sql`, or any file the manifest names. A `sql/` folder also holds
-     * Adminer / phpMyAdmin dumps and old upgrade scripts (newbb: `2510debug1.sql`, `xoops_mysql.sql`,
-     * `mysql.400.sql`) that SqlUtility never sees; their engine, prefix and `--` lines are not findings.
+     * The installer runs the file: a module's `sql/mysql.sql`, or the file an active `sqlfile` entry of its
+     * `xoops_version.php` names, resolved from the module root (`sql/english/install.sql` is two levels down).
+     * A `sql/` folder also holds Adminer / phpMyAdmin dumps and old upgrade scripts (newbb: `2510debug1.sql`,
+     * `xoops_mysql.sql`, `mysql.400.sql`) that SqlUtility never sees; their engine, prefix and `--` lines are not
+     * findings. A file outside any module (the core's `install/sql/mysql.structure.sql`) belongs to the core
+     * installer and stays inspected.
      */
     fun installerFile(file: PsiFile): Boolean {
+        val vf = file.virtualFile ?: return true
+        val root = XoopsPaths.moduleRoot(vf) ?: return true
         if (file.name.equals("mysql.sql", true)) return true
-        val manifest = read(file.virtualFile?.parent?.parent?.findChild("xoops_version.php")) ?: return false
-        return manifest.contains(file.name, ignoreCase = true)
+        val manifestFile = root.findChild("xoops_version.php") ?: return false
+        val manifest = PsiManager.getInstance(file.project).findFile(manifestFile) as? PhpFile ?: return false
+        return sqlfilePaths(manifest).any { root.findFileByRelativePath(it.removePrefix("./")) == vf }
     }
+
+    /**
+     * Every `.sql` path a `sqlfile` declaration of the manifest assigns, read from the PHP PSI, so comments,
+     * strings, heredocs, `?>` and comparisons are the parser's business. `$modversion['sqlfile']['mysql'] = 'x'`,
+     * `$modversion['sqlfile'][XOOPS_DB_TYPE] = 'x'`, `$modversion['sqlfile'] = ['pgsql' => 'y', 'mysql' => 'x']` and
+     * the array-manifest `'sqlfile' => ['mysql' => 'x']` (also `array(…)`) all count; every database entry is read.
+     */
+    fun sqlfilePaths(manifest: PhpFile): List<String> {
+        val values = ArrayList<PsiElement>()
+        for (a in PsiTreeUtil.findChildrenOfType(manifest, AssignmentExpression::class.java)) {
+            // `.=` appends to a path set elsewhere; it is not the declaration.
+            if (a is SelfAssignmentExpression) continue
+            // Only the `[…]` chain being written counts: a `sqlfile` read inside an index, or a destructuring
+            // target, does not make the right-hand side an installer file.
+            var access = a.variable as? ArrayAccessExpression
+            while (access != null && !isSqlfileKey(access.index?.value)) access = access.value as? ArrayAccessExpression
+            if (access != null) a.value?.let(values::add)
+        }
+        for (h in PsiTreeUtil.findChildrenOfType(manifest, ArrayHashElement::class.java)) {
+            if (isSqlfileKey(h.key)) h.value?.let(values::add)
+        }
+        return values
+            .flatMap { listOfNotNull(it as? StringLiteralExpression) + PsiTreeUtil.findChildrenOfType(it, StringLiteralExpression::class.java) }
+            .map { it.contents }
+            .filter { it.endsWith(".sql", ignoreCase = true) }
+    }
+
+    private fun isSqlfileKey(e: PsiElement?): Boolean = (e as? StringLiteralExpression)?.contents.equals("sqlfile", ignoreCase = true)
 
     /** `-- ` and `#` line comments and block comments blanked, offsets kept. */
     fun stripComments(text: String): String {
