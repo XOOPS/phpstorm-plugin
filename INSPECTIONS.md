@@ -208,9 +208,9 @@ statement, the CREATE TABLE prefixer fails, and that table is silently never cre
 **Fix:** inserts the space in the SQL file.
 
 ### XoopsSqlFileComment — Bare '--' comment line in installer SQL
-The same defect reported on the SQL file itself, one finding per line, for the file the installer runs: a module's
-`sql/mysql.sql`, the file an active `sqlfile` entry names (resolved from the module root, so
-`sql/english/install.sql` counts), or the core's own `install/sql/` schema. Dumps and old upgrade scripts in a
+The same defect reported on the SQL file itself, one finding per line, for the file the installer runs: the file an
+active `sqlfile` entry names (resolved from the module root, so `sql/english/install.sql` counts; `sql/mysql.sql`
+when the manifest names none), or the core's own `install/sql/` schema. Dumps and old upgrade scripts in a
 module's `sql/` folder are skipped, as is a file only a comment mentions.
 **Fix:** inserts the space on that line only, re-checking the live line text, so it is safe in any batch order. A line
 that is exactly `--` is blanked rather than given a trailing space, which "strip trailing spaces on save" would remove

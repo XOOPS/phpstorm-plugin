@@ -15,6 +15,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.php.lang.psi.PhpFile
 import com.jetbrains.php.lang.psi.elements.ArrayAccessExpression
+import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.ArrayHashElement
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.BinaryExpression
@@ -58,8 +59,9 @@ object InstallSql {
     }
 
     /**
-     * The installer runs the file: a module's `sql/mysql.sql`, or the file an active `sqlfile` entry of its
-     * `xoops_version.php` names, resolved from the module root (`sql/english/install.sql` is two levels down).
+     * The installer runs the file an active `sqlfile` entry of the module's `xoops_version.php` names, resolved from
+     * the module root (`sql/english/install.sql` is two levels down). Only when the manifest names no file (none
+     * declared, or a path built at runtime) is the conventional `sql/mysql.sql` assumed.
      * A `sql/` folder also holds Adminer / phpMyAdmin dumps and old upgrade scripts (newbb: `2510debug1.sql`,
      * `xoops_mysql.sql`, `mysql.400.sql`) that SqlUtility never sees; their engine, prefix and `--` lines are not
      * findings. Outside any module only the core installer's `install/sql/` schema stays inspected; any other
@@ -68,10 +70,11 @@ object InstallSql {
     fun installerFile(file: PsiFile): Boolean {
         val vf = file.virtualFile ?: return true
         val root = XoopsPaths.moduleRoot(vf) ?: return XoopsPaths.path(file).contains("/install/sql/")
-        if (file.name.equals(MODULE_SCHEMA, true)) return true
-        val manifestFile = root.findChild("xoops_version.php") ?: return false
-        val manifest = PsiManager.getInstance(file.project).findFile(manifestFile) as? PhpFile ?: return false
-        return sqlfilePaths(manifest).any { root.findFileByRelativePath(it.removePrefix("./")) == vf }
+        val manifest = root.findChild("xoops_version.php")
+            ?.let { PsiManager.getInstance(file.project).findFile(it) as? PhpFile }
+        val declared = manifest?.let(::sqlfilePaths).orEmpty()
+        if (declared.isNotEmpty()) return declared.any { root.findFileByRelativePath(it.removePrefix("./")) == vf }
+        return vf == root.findFileByRelativePath("sql/$MODULE_SCHEMA")
     }
 
     /**
@@ -79,34 +82,34 @@ object InstallSql {
      * strings, heredocs, `?>` and comparisons are the parser's business. `$modversion['sqlfile']['mysql'] = 'x'`,
      * `$modversion['sqlfile'][XOOPS_DB_TYPE] = 'x'`, `$modversion['sqlfile'] = ['pgsql' => 'y', 'mysql' => 'x']` and
      * the array-manifest `$modversion = ['sqlfile' => ['mysql' => 'x']]` (also `array(…)`) all count; every database
-     * entry is read, and `'sql/' . 'install.sql'` is joined. Only `$modversion` declares: `$other['sqlfile']` does not.
+     * entry is read, and `'sql/' . 'install.sql'` is joined. Only a top-level `sqlfile` key of `$modversion` declares:
+     * `$other['sqlfile']` and `$modversion['config']['sqlfile']` do not. An outer array assigned to `$modversion` may
+     * sit inside a call (`array_merge($defaults, [...])`).
      */
     fun sqlfilePaths(manifest: PhpFile): List<String> {
         val values = ArrayList<PsiElement>()
         for (a in PsiTreeUtil.findChildrenOfType(manifest, AssignmentExpression::class.java)) {
             // `.=` appends to a path set elsewhere; it is not the declaration.
-            if (a is SelfAssignmentExpression || !isModversion(a.variable)) continue
-            // Only the `[…]` chain being written counts: a `sqlfile` read inside an index, or a destructuring
-            // target, does not make the right-hand side an installer file.
+            if (a is SelfAssignmentExpression) continue
+            // The first `[…]` after `$modversion` in the chain being written must be `sqlfile`: a `sqlfile` read
+            // inside an index, a destructuring target or a nested key does not declare the installer file.
             var access = a.variable as? ArrayAccessExpression
-            while (access != null && !isSqlfileKey(access.index?.value)) access = access.value as? ArrayAccessExpression
-            if (access != null) a.value?.let(values::add)
+            while (access?.value is ArrayAccessExpression) access = access.value as ArrayAccessExpression
+            if (access != null && isModversion(access.value) && isSqlfileKey(access.index?.value)) a.value?.let(values::add)
         }
         for (h in PsiTreeUtil.findChildrenOfType(manifest, ArrayHashElement::class.java)) {
-            // A top-level entry of the array assigned to `$modversion` itself.
-            val owner = h.parent?.parent as? AssignmentExpression
-            if (isSqlfileKey(h.key) && owner?.value === h.parent && isModversion(owner.variable)) h.value?.let(values::add)
+            if (!isSqlfileKey(h.key)) continue
+            // An entry of the outermost array in `$modversion = …`, not of an array nested in another one.
+            val owner = PsiTreeUtil.getParentOfType(h, AssignmentExpression::class.java) ?: continue
+            val nested = PsiTreeUtil.getParentOfType(h.parent, ArrayCreationExpression::class.java, true, AssignmentExpression::class.java)
+            if (nested == null && isModversion(owner.variable)) h.value?.let(values::add)
         }
         return values.flatMap(::strings).filter { it.endsWith(".sql", ignoreCase = true) }
     }
 
     private fun isSqlfileKey(e: PsiElement?): Boolean = (e as? StringLiteralExpression)?.contents.equals("sqlfile", ignoreCase = true)
 
-    private fun isModversion(e: PsiElement?): Boolean {
-        var root = e
-        while (root is ArrayAccessExpression) root = root.value
-        return (root as? Variable)?.name == "modversion"
-    }
+    private fun isModversion(e: PsiElement?): Boolean = (e as? Variable)?.name == "modversion"
 
     /** The constant string of a literal or a literal-only concatenation, else null. */
     private fun constant(e: PsiElement?): String? = when (e) {

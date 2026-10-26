@@ -369,6 +369,10 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
     fun testInstallSqlIgnoresAFileOnlyACommentNames() =
         checkSql(XoopsInstallSqlInspection(), "InstallSql/nested", "modules/demo/sql/upgrade.sql", 0)
 
+    /** `sql/mysql.sql` is only the default: when `sqlfile` selects another file, the installer never runs it. */
+    fun testInstallSqlIgnoresMysqlSqlWhenTheManifestSelectsAnotherFile() =
+        checkSql(XoopsInstallSqlInspection(), "InstallSql/nested", "modules/demo/sql/mysql.sql", 0)
+
     /** The array manifest form: `'sqlfile' => ['mysql' => 'sql/english/install.sql']`. */
     fun testInstallSqlChecksTheArrayManifestSqlfile() =
         checkSql(XoopsInstallSqlInspection(), "InstallSql/arraymanifest", "modules/demo/sql/english/install.sql", 1)
@@ -403,6 +407,8 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
         assertEquals(live, paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/' . 'live.sql';"))
         assertEquals(emptyList<String>(), paths("<?php \$modversion['sqlfile']['mysql'] = 'sql/' . \$lang . '.sql';"))
         assertEquals(emptyList<String>(), paths("<?php \$other['sqlfile']['mysql'] = 'sql/backup.sql';"))
+        assertEquals(emptyList<String>(), paths("<?php \$modversion['config']['sqlfile'] = 'sql/backup.sql';"))
+        assertEquals(live, paths("<?php \$modversion = array_merge(\$defaults, ['sqlfile' => ['mysql' => 'sql/live.sql']]);"))
         assertEquals(emptyList<String>(), paths("<?php \$backup = ['sqlfile' => ['mysql' => 'sql/backup.sql']];"))
         assertEquals(
             emptyList<String>(),

@@ -11,13 +11,16 @@ checked against the module source and pinned with a fixture.
 
 - **DeprecatedCoreApi** no longer names `synchronization()`: it is the module handlers' own method (newbb reports 99
   calls), and the core's `XoopsPersistableObjectHandler::synchronization()` carries no `@deprecated` tag either.
-- **InstallSql** and **SqlFileComment** look only at the file the installer runs: a module's `sql/mysql.sql`, or the
-  file an active `sqlfile` entry names, resolved from the module root (so `sql/english/install.sql` counts, in both
-  the `$modversion['sqlfile']['mysql']` and the array-manifest form, with every database entry of an array read).
-  The manifest is read through the PHP parser, not as text: a commented-out declaration, a string or nowdoc that
-  looks like one, a comparison against `sqlfile`, and a `sqlfile` key on any variable other than `$modversion` do
-  not count, while a declaration behind an inline comment, after `?>`, with a multi-line `[XOOPS_DB_TYPE]` index,
-  or joined from literals (`'sql/' . 'install.sql'`) still does. Adminer / phpMyAdmin dumps and old upgrade
+- **InstallSql** and **SqlFileComment** look only at the file the installer runs: the file an active `sqlfile`
+  entry names, resolved from the module root (so `sql/english/install.sql` counts, in both the
+  `$modversion['sqlfile']['mysql']` and the array-manifest form, with every database entry of an array read), or
+  `sql/mysql.sql` when the manifest names no file. A leftover `sql/mysql.sql` beside a selected
+  `sql/english/install.sql` is not run and not checked. The manifest is read through the PHP parser, not as text:
+  a commented-out declaration, a string or nowdoc that looks like one, a comparison against `sqlfile`, a `sqlfile`
+  key on any variable other than `$modversion`, and a nested key such as `$modversion['config']['sqlfile']` do not
+  count, while a declaration behind an inline comment, after `?>`, with a multi-line `[XOOPS_DB_TYPE]` index,
+  joined from literals (`'sql/' . 'install.sql'`), or inside `$modversion = array_merge($defaults, [...])` still
+  does. Adminer / phpMyAdmin dumps and old upgrade
   scripts beside it (`2510debug1.sql`, `xoops_mysql.sql`, `mysql.400.sql`) are never split by SqlUtility, so their
   MyISAM engine, `xoops_` prefixes and bare `--` lines were 237 + 111 findings about files nothing executes. A file a
   comment merely mentions is not an installer file. The core's own `install/sql/` schema has no module manifest and
