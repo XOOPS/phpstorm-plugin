@@ -128,6 +128,7 @@ F["RootPathGuard/rootpage/modules/demo/servicemain.php"] = r"""<?php
 require dirname(__DIR__, 2) . '/mainfile.php';
 """
 F["RootPathGuard/rootpage/modules/demo/functions.php"] = r"""<?php
+// Helper for the XOOPS demo module.
 function demo_helper(): int
 {
     return 1;
@@ -246,8 +247,8 @@ class Util
 {
     public static function render($obj, array $images, $img): string
     {
-        $html = '<a href="' . htmlspecialchars((string) $obj->getVar('url'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">' . $obj->getVar('title') . '</a>';
-        $html .= "<input value='" . htmlspecialchars((string) $images['main']->getVar('image_name'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "'>";
+        $html = '<a href="' . $obj->getVar('url') . '">' . $obj->getVar('title') . '</a>';
+        $html .= "<input value='" . $images['main']->getVar('image_name') . "'>";
         $html .= '<img src="' . XOOPS_URL . '/thumb.php?src=' . rawurlencode((string) $img->getVar('image_name', 'n')) . '&w=100">';
         $html .= '<a href="' . htmlspecialchars((string) $obj->getVar('url'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">x</a>';
         $title = constant('CO_DEMO_FB') . $GLOBALS['xoopsModule']->getVar('dirname');
@@ -633,6 +634,19 @@ if (empty($_GET['x'])) {
     $x = 1;
 }
 $a = $_REQUEST['a'];
+if (isset($_POST[$name])) {
+    $dyn = 1;
+}
+if (isset($_POST['submit'], $_POST['passwd'])) {
+    $both = 1;
+}
+if (!isset($_POST['step'], $_SESSION['req'])) {
+    $mixed = 1;
+}
+$ok = isset($_GET['a'], $_GET['b']);
+if (isset($_POST)) {
+    $always = 1;
+}
 """
 F["Superglobal/keyed/modules/demo/include/ajax.after.php"] = r"""<?php
 
@@ -656,6 +670,19 @@ if (empty(Request::getVar('x', null, 'GET', 'none', Request::MASK_ALLOW_RAW | Re
     $x = 1;
 }
 $a = Request::getVar('a', null, 'default', 'none', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
+if (Request::hasVar($name, 'POST')) {
+    $dyn = 1;
+}
+if (Request::hasVar('submit', 'POST') && Request::hasVar('passwd', 'POST')) {
+    $both = 1;
+}
+if (!(Request::hasVar('step', 'POST') && isset($_SESSION['req']))) {
+    $mixed = 1;
+}
+$ok = (Request::hasVar('a', 'GET') && Request::hasVar('b', 'GET'));
+if (isset($_POST)) {
+    $always = 1;
+}
 """
 
 F["Superglobal/typed/modules/demo/xoops_version.php"] = "<?php\n$modversion['name'] = 'Demo';\n"
@@ -792,6 +819,9 @@ if (null != $_GET['l']) {
     $m = 3;
 }
 $all = $_POST;
+if (empty($_POST)) {
+    $none = 1;
+}
 foreach ($_REQUEST as $k => $v) {
     $copy[$k] = $v;
 }
@@ -825,6 +855,9 @@ if (null != Request::getVar('l', null, 'GET', 'none', Request::MASK_ALLOW_RAW | 
     $m = 3;
 }
 $all = Request::get('POST', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
+if (empty(Request::get('POST', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM))) {
+    $none = 1;
+}
 foreach (Request::get('default', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM) as $k => $v) {
     $copy[$k] = $v;
 }
@@ -850,12 +883,22 @@ F["Unserialize/unser/modules/demo/class/U.php"] = r"""<?php
 
 class U
 {
-    public function defaults($field, string $x): array
+    public function defaults($field, string $x, array $row): array
     {
+        $out = [];
         $a = unserialize($field->getVar('field_default', 'n'));
+        foreach ($a as $k => $v) {
+            $out[$k] = $v;
+        }
         $b = unserialize($x, ['allowed_classes' => false]);
+        $search = unserialize($row['search']);
+        $search->add(new \Criteria('x', 1));
+        $ret['search'] = unserialize($row['search']);
+        if (is_array(unserialize($x))) {
+            $out[] = count(unserialize($x));
+        }
 
-        return [$a, $b];
+        return [$out, $b, $search, $ret];
     }
 }
 """
@@ -863,12 +906,22 @@ F["Unserialize/unser/modules/demo/class/U.after.php"] = r"""<?php
 
 class U
 {
-    public function defaults($field, string $x): array
+    public function defaults($field, string $x, array $row): array
     {
+        $out = [];
         $a = unserialize($field->getVar('field_default', 'n'), ['allowed_classes' => false]);
+        foreach ($a as $k => $v) {
+            $out[$k] = $v;
+        }
         $b = unserialize($x, ['allowed_classes' => false]);
+        $search = unserialize($row['search']);
+        $search->add(new \Criteria('x', 1));
+        $ret['search'] = unserialize($row['search']);
+        if (is_array(unserialize($x, ['allowed_classes' => false]))) {
+            $out[] = count(unserialize($x, ['allowed_classes' => false]));
+        }
 
-        return [$a, $b];
+        return [$out, $b, $search, $ret];
     }
 }
 """
@@ -934,6 +987,7 @@ if (empty($items)) {
 
 F["Setcookie/cookie/modules/demo/class/U.php"] = r"""<?php
 
+/** Cookie helper of the XOOPS demo module. */
 class U
 {
     public static function cookie(string $name, string $value, int $expire): void
@@ -944,6 +998,7 @@ class U
 """
 F["Setcookie/cookie/modules/demo/class/U.after.php"] = r"""<?php
 
+/** Cookie helper of the XOOPS demo module. */
 class U
 {
     public static function cookie(string $name, string $value, int $expire): void
@@ -1427,14 +1482,14 @@ class Helper
 }
 """
 F["FileHeader/inlinehtml/modules/demo/class/Snippet.php"] = r"""<?php $title = 'x'; ?>
-<h1><?= $title ?></h1>
+<h1><?= $title ?> on XOOPS</h1>
 """
 F["FileHeader/inlinehtml/modules/demo/class/Snippet.after.php"] = r"""<?php
 /**
  * @copyright   XOOPS Project (https://xoops.org)
  * @license     GPL-2.0-or-later (https://www.gnu.org/licenses/gpl-2.0.html)
  */ $title = 'x'; ?>
-<h1><?= $title ?></h1>
+<h1><?= $title ?> on XOOPS</h1>
 """
 F["FileHeader/ccby/modules/demo/include/ajax_rating.php"] = r"""<?php
 // Ajax Rating script by Example Author
@@ -1810,7 +1865,8 @@ $xoopsDB->query('SELECT * FROM t LIMIT ' . count($_POST['ids']));
 """
 
 F["SqlComment/sql/modules/demo/xoops_version.php"] = "<?php\n$modversion['name'] = 'Demo';\n$modversion['sqlfile']['mysql'] = 'sql/mysql.sql';\n"
-F["SqlComment/sql/modules/demo/sql/mysql.sql"] = """-- ok comment
+F["SqlComment/sql/modules/demo/sql/mysql.sql"] = r"""--
+-- ok comment
 --second bad
 --bad comment
 # hash comment
@@ -1818,7 +1874,8 @@ CREATE TABLE demo_items (
   id INT NOT NULL
 );
 """
-F["SqlComment/sql/modules/demo/sql/mysql.after.sql"] = """-- ok comment
+F["SqlComment/sql/modules/demo/sql/mysql.after.sql"] = r"""
+-- ok comment
 -- second bad
 -- bad comment
 # hash comment
