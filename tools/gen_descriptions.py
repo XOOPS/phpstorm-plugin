@@ -134,8 +134,9 @@ to the server and a custom reason phrase is not kept.
 On some server APIs (seen with CGI, and for an <code>HTTP/</code> line with PHP's built-in server) that earlier
 status is then the one sent.</p>
 <p>The quick fix is therefore offered only when every other <code>header()</code> call of the file sends a plain
-<code>Name: value</code> field other than <code>Status:</code>. A file with a second status line, or with a
-computed <code>header()</code> argument, is reported without a fix: convert its status lines together. A status line set in another file of the
+<code>Name: value</code> field other than <code>Status:</code> and the file has no
+<code>http_response_code(n)</code> setter. A file with a second status line, a setter, or a computed
+<code>header()</code> argument is reported without a fix: convert its status lines together. A status line set in another file of the
 same request is not seen.</p>
 """,
     "XoopsIncludeOnceHeader": r"""

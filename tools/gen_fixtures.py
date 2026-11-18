@@ -914,6 +914,14 @@ if (empty($items)) {
     header('HTTP/1.0 404 Not Found');
 }
 """
+# The stored 404 line outlives the later setter; after the fix the setter would win. Reported, no fix.
+F["HttpStatus/latersetter/modules/demo/ajax.php"] = r"""<?php
+require dirname(__DIR__, 2) . '/mainfile.php';
+header('HTTP/1.0 404 Not Found');
+if (empty($items)) {
+    http_response_code(500);
+}
+"""
 # A header() argument that cannot be read may be a status line. Reported, no fix.
 F["HttpStatus/dynamic/modules/demo/ajax.php"] = r"""<?php
 require dirname(__DIR__, 2) . '/mainfile.php';

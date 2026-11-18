@@ -84,7 +84,7 @@ class XoopsHttpStatusInspection : XoopsInspection() {
                 val code = statusOf(reference) ?: return
                 val fixable = onlyStatusLine(reference)
                 val advice = if (fixable) "use http_response_code($code)"
-                else "http_response_code($code) keeps a status line another header() call of this file may set; convert them together"
+                else "this file sets the status elsewhere too and http_response_code($code) does not replace a stored status line; convert them together"
                 val fixes = if (fixable) arrayOf<LocalQuickFix>(HttpResponseCodeFix()) else emptyArray()
                 holder.registerProblem(reference, "XOOPS: hard-coded HTTP status line — $advice", ProblemHighlightType.WEAK_WARNING, *fixes)
             }
@@ -100,10 +100,15 @@ class XoopsHttpStatusInspection : XoopsInspection() {
         private val field = Regex("""^(?!(?i:status)\s*:)[A-Za-z][A-Za-z0-9-]*\s*:""")
         fun statusOf(call: FunctionReference): String? = Php.firstStringArg(call)?.let { status.find(it)?.groupValues?.get(1) }
 
-        /** Every other `header()` call of the file sends a plain `Name: value` field. */
+        /**
+         * Every other `header()` call of the file sends a plain `Name: value` field, and nothing sets the code with
+         * `http_response_code(n)`: after `header('HTTP/1.0 404 …')` that setter is ignored, after the fix it would win.
+         */
         fun onlyStatusLine(call: FunctionReference): Boolean =
-            Php.calls(call.containingFile, "header").all { other ->
-                other === call || other is MethodReference || Php.firstStringArg(other)?.let { field.containsMatchIn(it) } == true
+            Php.calls(call.containingFile, "header", "http_response_code").all { other ->
+                other === call || other is MethodReference ||
+                    if (Php.isCall(other, "header")) Php.firstStringArg(other)?.let { field.containsMatchIn(it) } == true
+                    else other.parameters.isEmpty()
             }
     }
 }

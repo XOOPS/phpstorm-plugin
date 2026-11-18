@@ -344,6 +344,11 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
         check(XoopsHttpStatusInspection(), "HttpStatus/statusfield", "modules/demo/ajax.php", 1,
             "Replace with http_response_code", "modules/demo/ajax.php", remaining = 1)
 
+    /** A later `http_response_code(500)` is ignored after the status line and would win after the fix. */
+    fun testHttpStatusLineBesideCodeSetterIsReportedWithoutFix() =
+        check(XoopsHttpStatusInspection(), "HttpStatus/latersetter", "modules/demo/ajax.php", 1,
+            "Replace with http_response_code", "modules/demo/ajax.php", remaining = 1)
+
     /** A computed or interpolated `header()` argument may be a status line: reported without the fix. */
     fun testHttpStatusLineBesideDynamicHeaderIsReportedWithoutFix() =
         check(XoopsHttpStatusInspection(), "HttpStatus/dynamic", "modules/demo/ajax.php", 1,
