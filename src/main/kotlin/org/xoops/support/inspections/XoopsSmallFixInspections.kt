@@ -1,5 +1,6 @@
 package org.xoops.support.inspections
 
+import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
@@ -67,7 +68,13 @@ class AddAllowedClassesFix : XoopsFix() {
     }
 }
 
-/** `header('HTTP/1.0 404 Not Found')` → `http_response_code(404)`. */
+/**
+ * `header('HTTP/1.0 404 Not Found')` → `http_response_code(404)`.
+ *
+ * `http_response_code()` sets the code but keeps a status line an earlier `header('HTTP/…')` stored, and CGI and
+ * the built-in server then send that line. The fix is offered only where no other `header()` call of the file
+ * can store one.
+ */
 class XoopsHttpStatusInspection : XoopsInspection() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         return object : PhpElementVisitor() {
@@ -75,19 +82,34 @@ class XoopsHttpStatusInspection : XoopsInspection() {
                 if (!Php.isCall(reference, "header") || reference is MethodReference || skipConvention(reference.containingFile)) return
                 if (reference.parameters.size != 1) return
                 val code = statusOf(reference) ?: return
-                holder.registerProblem(
-                    reference,
-                    "XOOPS: hard-coded HTTP status line — use http_response_code($code)",
-                    ProblemHighlightType.WEAK_WARNING,
-                    HttpResponseCodeFix(),
-                )
+                val fixable = onlyStatusLine(reference)
+                val advice = if (fixable) "use http_response_code($code)"
+                else "this file sets the status elsewhere too and http_response_code($code) does not replace a stored status line; convert them together"
+                val fixes = if (fixable) arrayOf<LocalQuickFix>(HttpResponseCodeFix()) else emptyArray()
+                holder.registerProblem(reference, "XOOPS: hard-coded HTTP status line — $advice", ProblemHighlightType.WEAK_WARNING, *fixes)
             }
         }
     }
 
     companion object {
         private val status = Regex("""(?i)^HTTP/\d(?:\.\d)?\s+(\d{3})\b""")
+        /**
+         * `Name: value`, the one argument shape that provably is not a status line (`"$proto 403"` is not provable).
+         * `Status:` is the CGI spelling of one and outlives `http_response_code()` the same way.
+         */
+        private val field = Regex("""^(?!(?i:status)\s*:)[A-Za-z][A-Za-z0-9-]*\s*:""")
         fun statusOf(call: FunctionReference): String? = Php.firstStringArg(call)?.let { status.find(it)?.groupValues?.get(1) }
+
+        /**
+         * Every other `header()` call of the file sends a plain `Name: value` field, and nothing sets the code with
+         * `http_response_code(n)`: after `header('HTTP/1.0 404 …')` that setter is ignored, after the fix it would win.
+         */
+        fun onlyStatusLine(call: FunctionReference): Boolean =
+            Php.calls(call.containingFile, "header", "http_response_code").all { other ->
+                other === call || other is MethodReference ||
+                    if (Php.isCall(other, "header")) Php.firstStringArg(other)?.let { field.containsMatchIn(it) } == true
+                    else other.parameters.isEmpty()
+            }
     }
 }
 
