@@ -23,6 +23,18 @@ class Redundant
         return $count;
     }
 
+    /** Reported: `$this->strict || throw …` leaves only when strict is off, so the block is no exit guard. */
+    public function conditionalThrow()
+    {
+        $result = $this->db->query('SELECT COUNT(*) FROM t');
+        if (!$this->db->isResultSet($result)) {
+            $this->strict || throw new \RuntimeException('query failed');
+        }
+        [$count] = $this->db->fetchRow($result);
+
+        return $count;
+    }
+
     /** Reported: only the legacy exit guards the fetch. */
     public function legacy()
     {

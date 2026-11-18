@@ -24,7 +24,7 @@ import com.jetbrains.php.lang.psi.elements.PhpExit
 import com.jetbrains.php.lang.psi.elements.PhpNamespace
 import com.jetbrains.php.lang.psi.elements.PhpPsiElement
 import com.jetbrains.php.lang.psi.elements.PhpReturn
-import com.jetbrains.php.lang.psi.elements.PhpThrow
+import com.jetbrains.php.lang.psi.elements.PhpThrowExpression
 import com.jetbrains.php.lang.psi.elements.PhpUseList
 import com.jetbrains.php.lang.psi.elements.Statement
 import com.jetbrains.php.lang.psi.elements.StringLiteralExpression
@@ -268,7 +268,9 @@ object Php {
             else -> body
         }
         if (last == null) return false
-        if (last is PhpReturn || last is PhpThrow) return true
+        // A `throw …;` statement starts with its throw expression; `$x ?? throw …` and `$ok || throw …` do not,
+        // and they leave only on one side.
+        if (last is PhpReturn || last.firstChild is PhpThrowExpression) return true
         if (PsiTreeUtil.findChildOfType(last, PhpExit::class.java, false) != null) return true
         val firstCall = PsiTreeUtil.findChildOfType(last, FunctionReference::class.java, false) ?: return false
         if (isCall(firstCall, "redirect_header")) return true

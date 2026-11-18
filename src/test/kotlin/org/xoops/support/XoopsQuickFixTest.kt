@@ -926,9 +926,12 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
     fun testPathContainmentCanonicalisedAndDisplayPaths() =
         check(XoopsPathContainmentInspection(), "PathContainment/canonical", "class/logger/Paths.php", 2)
 
-    /** page_tablesfill.php: an isResultSet() exit above a `!$result` exit is no legacy guard. */
+    /**
+     * page_tablesfill.php: an isResultSet() exit above a `!$result` exit is no legacy guard. A `throw …;` statement
+     * is an exit, a throw on one side of `||` is not.
+     */
     fun testResultSetGuardRedundantLegacyExitIsNotReported() =
-        check(XoopsResultSetGuardInspection(), "ResultSetGuard/redundant", "modules/demo/class/Redundant.php", 1)
+        check(XoopsResultSetGuardInspection(), "ResultSetGuard/redundant", "modules/demo/class/Redundant.php", 2)
 
     /** file_safety.php: the existence check in a previous try (every catch returns) dominates unlink(). */
     fun testUnlinkCheckedInsidePreviousTry() =

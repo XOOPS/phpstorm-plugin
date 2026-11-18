@@ -90,7 +90,7 @@ class NeverBreakTest : BasePlatformTestCase() {
     fun testVoidFunctionGetsABareReturn() {
         val text = fixEverything("adslight", "index.php")
         val voidFunctions = PsiTreeUtil.findChildrenOfType(myFixture.file, Function::class.java)
-            .filter { it.returnType?.text?.contains("void") == true }
+            .filter { it.typeDeclaration?.text?.contains("void") == true }
         assertTrue("fixture lost its void functions", voidFunctions.isNotEmpty())
         for (fn in voidFunctions) {
             val valued = PsiTreeUtil.findChildrenOfType(fn, PhpReturn::class.java).filter { it.argument != null }
