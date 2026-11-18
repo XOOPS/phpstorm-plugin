@@ -127,7 +127,8 @@ incompatible override at class load. Reported only — adding <code>&amp;</code>
 """,
     "XoopsHttpStatus": r"""
 <code>header('HTTP/1.0 404 Not Found')</code> hard-codes the protocol version. Use
-<code>http_response_code(404)</code>.
+<code>http_response_code(404)</code>. The response status is the same (still 404); only the protocol version
+is left to the server.
 """,
     "XoopsIncludeOnceHeader": r"""
 <p>Reports <code>include</code> or <code>require</code> of <code>header.php</code> / <code>footer.php</code>

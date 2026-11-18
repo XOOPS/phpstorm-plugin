@@ -307,7 +307,8 @@ without the tag (third-party MIT / GPL prose) is only noted, never rewritten.
 
 ### XoopsHttpStatus — Hard-coded HTTP status line
 `header('HTTP/1.0 404 Not Found')` hard-codes the protocol version.
-**Fix:** `http_response_code(404)`.
+**Fix:** `http_response_code(404)`. The response status is the same (still 404); only the protocol version is left
+to the server.
 
 ### XoopsUnlink — unlink() without is_file() check
 `unlink($path)` with no `is_file()` / `file_exists()` on the same expression dominating it. A check in the enclosing
