@@ -127,8 +127,16 @@ incompatible override at class load. Reported only — adding <code>&amp;</code>
 """,
     "XoopsHttpStatus": r"""
 <code>header('HTTP/1.0 404 Not Found')</code> hard-codes the protocol version. Use
-<code>http_response_code(404)</code>. The response status is the same (still 404); only the protocol version
-is left to the server.
+<code>http_response_code(404)</code>. The status code sent is the same (still 404); the protocol version is left
+to the server and a custom reason phrase is not kept.
+<p>One exception: <code>http_response_code()</code> does not replace a status line that an earlier
+<code>header('HTTP/&hellip;')</code> or <code>header('Status: &hellip;')</code> call stored in the same request.
+On some server APIs (seen with CGI, and for an <code>HTTP/</code> line with PHP's built-in server) that earlier
+status is then the one sent.</p>
+<p>The quick fix is therefore offered only when every other <code>header()</code> call of the file sends a plain
+<code>Name: value</code> field other than <code>Status:</code>. A file with a second status line, or with a
+computed <code>header()</code> argument, is reported without a fix: convert its status lines together. A status line set in another file of the
+same request is not seen.</p>
 """,
     "XoopsIncludeOnceHeader": r"""
 <p>Reports <code>include</code> or <code>require</code> of <code>header.php</code> / <code>footer.php</code>

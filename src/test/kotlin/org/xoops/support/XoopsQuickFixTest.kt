@@ -329,6 +329,26 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
         check(XoopsHttpStatusInspection(), "HttpStatus/status", "modules/demo/images/index.php", 1,
             "Replace with http_response_code", "modules/demo/images/index.after.php")
 
+    /** `header('Content-Type: …')` calls beside the status line cannot store one: the fix stays. */
+    fun testHttpStatusLineBesidePlainFields() =
+        check(XoopsHttpStatusInspection(), "HttpStatus/guard", "modules/demo/include/feed.php", 1,
+            "Replace with http_response_code", "modules/demo/include/feed.after.php")
+
+    /** `http_response_code()` keeps an earlier `header('HTTP/1.1 200 OK')` line, so neither call gets the fix. */
+    fun testHttpStatusLineTwiceIsReportedWithoutFix() =
+        check(XoopsHttpStatusInspection(), "HttpStatus/twolines", "modules/demo/ajax.php", 2,
+            "Replace with http_response_code", "modules/demo/ajax.php", remaining = 2)
+
+    /** `header('Status: 403 Forbidden')` is the CGI status field and survives `http_response_code()` as well. */
+    fun testHttpStatusLineBesideStatusFieldIsReportedWithoutFix() =
+        check(XoopsHttpStatusInspection(), "HttpStatus/statusfield", "modules/demo/ajax.php", 1,
+            "Replace with http_response_code", "modules/demo/ajax.php", remaining = 1)
+
+    /** A computed or interpolated `header()` argument may be a status line: reported without the fix. */
+    fun testHttpStatusLineBesideDynamicHeaderIsReportedWithoutFix() =
+        check(XoopsHttpStatusInspection(), "HttpStatus/dynamic", "modules/demo/ajax.php", 1,
+            "Replace with http_response_code", "modules/demo/ajax.php", remaining = 1)
+
     fun testSetcookie() =
         check(XoopsSetcookieInspection(), "Setcookie/cookie", "modules/demo/class/U.php", 1,
             "Replace setcookie()", "modules/demo/class/U.after.php")

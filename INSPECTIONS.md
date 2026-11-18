@@ -307,8 +307,13 @@ without the tag (third-party MIT / GPL prose) is only noted, never rewritten.
 
 ### XoopsHttpStatus — Hard-coded HTTP status line
 `header('HTTP/1.0 404 Not Found')` hard-codes the protocol version.
-**Fix:** `http_response_code(404)`. The response status is the same (still 404); only the protocol version is left
-to the server.
+**Fix:** `http_response_code(404)`. The status code sent is the same (still 404); the protocol version is left to the
+server and a custom reason phrase is not kept. One exception: `http_response_code()` does not replace a status line
+that an earlier `header('HTTP/…')` or `header('Status: …')` call stored in the same request. On some server APIs
+(seen with CGI, and for an `HTTP/` line with PHP's built-in server) that earlier status is then the one sent. The fix is therefore offered
+only when every other `header()` call of the file sends a plain `Name: value` field other than `Status:`. A file with a second status line, or with a computed
+`header()` argument, is reported without a fix: convert its status lines together. A status line set in another file
+of the same request is not seen.
 
 ### XoopsUnlink — unlink() without is_file() check
 `unlink($path)` with no `is_file()` / `file_exists()` on the same expression dominating it. A check in the enclosing

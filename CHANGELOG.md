@@ -4,6 +4,15 @@ Marketplace plugin `org.xoops.plugin.support`. Versions 0.4.0 to 0.7.2 below are
 rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 release of the previous code base
 (https://github.com/XOOPS/phpstorm-plugin).
 
+## Unreleased
+
+- **HttpStatus** offers `http_response_code(404)` as a quick fix only when every other `header()` call of the file
+  sends a plain `Name: value` field other than `Status:`. `http_response_code()` does not replace a status line that
+  an earlier `header('HTTP/…')` or `header('Status: …')` call stored in the same request, and some server APIs then
+  send that earlier status (seen with CGI, and for an `HTTP/` line with PHP's built-in server). A file with a second
+  status line, or with a computed `header()` argument, is reported without a fix. The description states that the
+  status code sent by the replacement is the same.
+
 ## 1.0.0-alpha.5 — 1.0.0 Alpha 5 — Marketplace release 2026-10-26
 
 False positives from a run over three newbb trees (`280test1/htdocs/modules/02/01inspections`, 2026-10-26), each

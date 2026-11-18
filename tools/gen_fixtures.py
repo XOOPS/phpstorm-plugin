@@ -879,6 +879,50 @@ header('HTTP/1.0 404 Not Found');
 F["HttpStatus/status/modules/demo/images/index.after.php"] = r"""<?php
 http_response_code(404);
 """
+# Other header() calls that send plain fields do not block the fix.
+F["HttpStatus/guard/modules/demo/include/feed.php"] = r"""<?php
+if (!defined('XOOPS_ROOT_PATH')) {
+    header('HTTP/1.0 404 Not Found');
+    exit;
+}
+header('Content-Type: application/json');
+header("Cache-Control: no-store");
+echo json_encode($GLOBALS['xoopsConfig']['sitename']);
+"""
+F["HttpStatus/guard/modules/demo/include/feed.after.php"] = r"""<?php
+if (!defined('XOOPS_ROOT_PATH')) {
+    http_response_code(404);
+    exit;
+}
+header('Content-Type: application/json');
+header("Cache-Control: no-store");
+echo json_encode($GLOBALS['xoopsConfig']['sitename']);
+"""
+# Two status lines: http_response_code(404) would keep the stored "200 OK" line. Reported, no fix.
+F["HttpStatus/twolines/modules/demo/ajax.php"] = r"""<?php
+require dirname(__DIR__, 2) . '/mainfile.php';
+header('HTTP/1.1 200 OK');
+if (empty($items)) {
+    header('HTTP/1.0 404 Not Found');
+}
+"""
+# `Status:` is the CGI status field: it outlives http_response_code() too. Reported, no fix.
+F["HttpStatus/statusfield/modules/demo/ajax.php"] = r"""<?php
+require dirname(__DIR__, 2) . '/mainfile.php';
+header('status: 403 Forbidden');
+if (empty($items)) {
+    header('HTTP/1.0 404 Not Found');
+}
+"""
+# A header() argument that cannot be read may be a status line. Reported, no fix.
+F["HttpStatus/dynamic/modules/demo/ajax.php"] = r"""<?php
+require dirname(__DIR__, 2) . '/mainfile.php';
+header($_SERVER['SERVER_PROTOCOL'] . ' 403 Forbidden');
+header("$proto 500 Internal Server Error");
+if (empty($items)) {
+    header('HTTP/1.0 404 Not Found');
+}
+"""
 
 F["Setcookie/cookie/modules/demo/class/U.php"] = r"""<?php
 
