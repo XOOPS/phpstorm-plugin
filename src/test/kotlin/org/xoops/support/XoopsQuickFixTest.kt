@@ -930,8 +930,12 @@ class XoopsQuickFixTest : BasePlatformTestCase() {
      * page_tablesfill.php: an isResultSet() exit above a `!$result` exit is no legacy guard. A `throw …;` statement
      * is an exit, a throw on one side of `||` is not.
      */
-    fun testResultSetGuardRedundantLegacyExitIsNotReported() =
+    fun testResultSetGuardRedundantLegacyExitIsNotReported() {
         check(XoopsResultSetGuardInspection(), "ResultSetGuard/redundant", "modules/demo/class/Redundant.php", 2)
+        val lines = myFixture.doHighlighting().filter { it.description?.startsWith("XOOPS:") == true }
+            .map { myFixture.editor.document.getLineNumber(it.startOffset) + 1 }.sorted()
+        assertEquals(listOf(33, 42), lines)
+    }
 
     /** file_safety.php: the existence check in a previous try (every catch returns) dominates unlink(). */
     fun testUnlinkCheckedInsidePreviousTry() =
