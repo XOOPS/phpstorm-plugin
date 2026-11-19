@@ -6,7 +6,7 @@ steps to try each feature and what you should see. Version covered: 0.6.1.
 ## 1. Install
 
 1. Build the zip (`./gradlew buildPlugin`) or take
-   `build/distributions/xoops-support-1.0.0-alpha.4.zip`.
+   `build/distributions/xoops-support-1.0.0-alpha.6.zip`.
 2. PhpStorm → **Settings → Plugins** → gear icon → **Install Plugin from
    Disk…** → select the zip → **Restart IDE**.
 3. After restart, **Settings → Plugins → Installed** shows "XOOPS Support
