@@ -55,6 +55,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.0.0 Alpha 6 (1.0.0-alpha.6)</h3>
+        <p>A narrower HttpStatus quick-fix, and no deprecated API usage left for the JetBrains Plugin Verifier.</p>
+        <ul>
+          <li>HttpStatus offers <code>http_response_code(404)</code> as a quick-fix only when the file sets no other status: every other <code>header()</code> call sends a plain <code>Name: value</code> field other than <code>Status:</code>, and there is no <code>http_response_code(n)</code> setter. A file with a second status line, a setter or a computed <code>header()</code> argument is reported without a fix.</li>
+          <li>The exit-guard check reads a <code>throw</code> statement through <code>PhpThrowExpression</code>, and ResultSetGuard reads a declared return type through <code>getTypeDeclaration()</code>; both replace API that PhpStorm 2026.2 and 2026.3 mark as deprecated.</li>
+          <li>The description says that install and update normally need no IDE restart.</li>
+        </ul>
         <h3>1.0.0 Alpha 5 (1.0.0-alpha.5)</h3>
         <p>False positives found on three newbb trees, each pinned with a fixture.</p>
         <ul>
