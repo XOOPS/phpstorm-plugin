@@ -248,7 +248,7 @@ class XoopsResultSetGuardInspection : XoopsInspection() {
         }
 
         private fun plainReturn(fn: Function, element: PsiElement): String? {
-            val declaredRaw = fn.returnType?.text?.replace(":", "")?.trim()?.lowercase()
+            val declaredRaw = fn.typeDeclaration?.text?.replace(":", "")?.trim()?.lowercase()
             if (!declaredRaw.isNullOrBlank()) {
                 val nullable = declaredRaw.startsWith("?") || declaredRaw.split('|').any { it.trim() == "null" }
                 val declared = declaredRaw.removePrefix("?")

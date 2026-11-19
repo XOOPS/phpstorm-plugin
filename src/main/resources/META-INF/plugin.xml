@@ -49,7 +49,7 @@
         <h3>Getting started</h3>
         <p>Install the plugin and open a XOOPS project. Detection is automatic. You can set the Core Version and other
         options under <b>Settings → Languages &amp; Frameworks → XOOPS Support</b>, and the inspections are listed
-        under <b>Settings → Editor → Inspections → XOOPS</b>. The plugin installs and updates without an IDE restart.</p>
+        under <b>Settings → Editor → Inspections → XOOPS</b>. The plugin is dynamic: it normally installs and updates without an IDE restart.</p>
 
         <p><a href="https://github.com/XOOPS/phpstorm-plugin">Source, documentation and issues on GitHub</a></p>
     ]]></description>
@@ -89,7 +89,7 @@
             <code>class/xoopsobject.php</code>, <code>xoopsmodule.php</code>, <code>xoopsuser.php</code> and <code>mimetypes.inc.php</code> stubs moved to
             <code>kernel/</code> / <code>include/</code>; the eight deprecated <code>xoops_load()</code> short names (<code>'cache'</code> → <code>'xoopscache'</code> …);
             and a new inspection for <code>$xoopsOption[…]</code> inside a function without <code>global $xoopsOption</code>.</li>
-          <li>Dynamic install and update without restart (language-constant cache is a project service).</li>
+          <li>Dynamic plugin: install and update normally need no restart (language-constant cache is a project service).</li>
           <li>Settings page (Core Version override, auto-scan, startup balloon), <b>New → XOOPS Module…</b> scaffold with a legacy or hybrid layout (Helper, PSR-4 autoloader, Xmf admin side) whose output passes every inspection, Tools → XOOPS Support menu, and Ctrl+B / Find Usages on language constants used as strings or in Smarty templates - all carried over from Alpha 3 and rebuilt.</li>
         </ul>
         <h3>1.0.0 Alpha 3 (1.0.0-alpha.3)</h3>

@@ -13,6 +13,12 @@ rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 relea
   `HTTP/` line with PHP's built-in server). A file with a second status line, a setter, or a computed `header()`
   argument is reported without a fix. The description states that the status code sent by the replacement is the
   same.
+- No deprecated PHP plugin API is left (JetBrains Plugin Verifier, 2026.2 and 2026.3: "2 usages of deprecated API"):
+  the exit-guard check reads a `throw …;` statement through `PhpThrowExpression` instead of `PhpThrow`, and
+  **ResultSetGuard** reads a declared return type through `Function.getTypeDeclaration()` instead of
+  `getReturnType()`. A throw on one side of `||` or `??` is still no exit guard.
+- The plugin description says that install and update normally need no IDE restart; the IDE decides that per
+  install, and the verifier asks for a manual check.
 
 ## 1.0.0-alpha.5 — 1.0.0 Alpha 5 — Marketplace release 2026-10-26
 
