@@ -55,6 +55,8 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.0.0-alpha.6.1</h3>
+        <p>Fixed a resource path that prevented PhpStorm from loading the eight XOOPS live templates.</p>
         <h3>1.0.0 Alpha 6 (1.0.0-alpha.6)</h3>
         <p>A narrower HttpStatus quick-fix, and no deprecated API usage left for the JetBrains Plugin Verifier.</p>
         <ul>
@@ -134,7 +136,7 @@
 
         <postStartupActivity implementation="org.xoops.support.XoopsProjectDetector"/>
 
-        <defaultLiveTemplates file="/liveTemplates/XOOPS.xml"/>
+        <defaultLiveTemplates file="liveTemplates/Xoops.xml"/>
 
         <completion.contributor language="PHP"
                                 implementationClass="org.xoops.support.completion.XoopsLanguageConstantCompletionContributor"/>
