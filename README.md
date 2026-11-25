@@ -65,8 +65,8 @@ Smarty (delimiters, registration, Smarty 3 / 5 migrations), language files, and 
 quick-fix changes and when it stays silent. It is written from the same descriptions PhpStorm shows in the
 inspection settings (`src/main/resources/inspectionDescriptions/`), so the two stay in step.
 
-Plus, unchanged from 0.3: project detection, the XOOPS tool window, language-constant
-completion and eight live templates.
+Project detection, the XOOPS tool window, and language-constant completion are unchanged
+from 0.3. The plugin currently includes eight live templates.
 
 ## Building and testing
 

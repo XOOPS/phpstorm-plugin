@@ -24,7 +24,14 @@ class PluginDescriptorTest {
             assertNotNull("missing registered live templates: $path", entry)
             val templates = jar.getInputStream(entry).use { parser.parse(it) }
             assertEquals("XOOPS", templates.documentElement.getAttribute("group"))
-            assertTrue(templates.getElementsByTagName("template").length > 0)
+            val entries = templates.getElementsByTagName("template")
+            val names = (0 until entries.length).map { index ->
+                (entries.item(index) as Element).getAttribute("name")
+            }.toSet()
+            assertEquals(
+                setOf("xoguard", "xofetch", "xolang", "xocriteria", "xorequest", "xofetchdb", "xohead", "xoexec"),
+                names,
+            )
         }
     }
 
