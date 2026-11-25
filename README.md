@@ -66,14 +66,14 @@ quick-fix changes and when it stays silent. It is written from the same descript
 inspection settings (`src/main/resources/inspectionDescriptions/`), so the two stay in step.
 
 Plus, unchanged from 0.3: project detection, the XOOPS tool window, language-constant
-completion and five live templates.
+completion and eight live templates.
 
 ## Building and testing
 
 ```
 cd phpstorm-plugin
 ./gradlew test            # golden-file suite + descriptor consistency
-./gradlew buildPlugin     # build/distributions/xoops-support-1.0.0-alpha.6.zip
+./gradlew buildPlugin     # build/distributions/xoops-support-1.0.0-alpha.6.1.zip
 ./gradlew runIde          # sandboxed PhpStorm with the plugin installed
 ```
 

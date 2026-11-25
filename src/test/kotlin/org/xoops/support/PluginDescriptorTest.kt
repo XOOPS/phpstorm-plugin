@@ -6,10 +6,27 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.w3c.dom.Element
+import java.util.jar.JarFile
 import javax.xml.parsers.DocumentBuilderFactory
 
 /** Every registered inspection instantiates, matches its shortName and ships a description page. */
 class PluginDescriptorTest {
+
+    @Test
+    fun registeredLiveTemplatesLoadFromPluginJar() {
+        JarFile(System.getProperty("xoops.plugin.jar")).use { jar ->
+            val parser = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+            val descriptor = jar.getInputStream(jar.getJarEntry("META-INF/plugin.xml")).use { parser.parse(it) }
+            val registrations = descriptor.getElementsByTagName("defaultLiveTemplates")
+            assertEquals(1, registrations.length)
+            val path = (registrations.item(0) as Element).getAttribute("file")
+            val entry = jar.getJarEntry(path)
+            assertNotNull("missing registered live templates: $path", entry)
+            val templates = jar.getInputStream(entry).use { parser.parse(it) }
+            assertEquals("XOOPS", templates.documentElement.getAttribute("group"))
+            assertTrue(templates.getElementsByTagName("template").length > 0)
+        }
+    }
 
     @Test
     fun everyLocalInspectionIsConsistent() {
