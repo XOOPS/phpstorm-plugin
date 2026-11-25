@@ -6,7 +6,7 @@ steps to try each feature and what you should see. Version covered: 0.6.1.
 ## 1. Install
 
 1. Build the zip (`./gradlew buildPlugin`) or take
-   `build/distributions/xoops-support-1.0.0-alpha.6.zip`.
+   `build/distributions/xoops-support-1.0.0-alpha.6.1.zip`.
 2. PhpStorm → **Settings → Plugins** → gear icon → **Install Plugin from
    Disk…** → select the zip → **Restart IDE**.
 3. After restart, **Settings → Plugins → Installed** shows "XOOPS Support
@@ -158,9 +158,9 @@ creating a stub; skip `system_*`, other modules and Smarty comments).
 
 ## 5. Language-constant completion, 6. Live templates
 
-Unchanged from 0.3: type `_MI_` / `_AM_` / `_MD_` in a PHP file for completion
-from every `language/` directory; `xoguard`, `xofetch`, `xolang`, `xocriteria`,
-`xorequest` + Tab.
+Type `_MI_`, `_AM_`, or `_MD_` in a PHP file for completion from every
+`language/` directory. To expand a live template, type `xoguard`, `xofetch`,
+`xolang`, `xocriteria`, `xorequest`, `xofetchdb`, `xohead`, or `xoexec` and press Tab.
 
 ## 7. Running the tests
 

@@ -4,6 +4,10 @@ Marketplace plugin `org.xoops.plugin.support`. Versions 0.4.0 to 0.7.2 below are
 rebuild; it ships as **1.0.0 Alpha 4**, the successor of the 1.0.0 Alpha 3 release of the previous code base
 (https://github.com/XOOPS/phpstorm-plugin).
 
+## 1.0.0-alpha.6.1
+
+- Fixed a resource path that prevented PhpStorm from loading the eight XOOPS live templates.
+
 ## 1.0.0-alpha.6 — 1.0.0 Alpha 6 — Marketplace release 2026-11-18
 
 - **HttpStatus** offers `http_response_code(404)` as a quick fix only when every other `header()` call of the file

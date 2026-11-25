@@ -58,7 +58,10 @@ tasks {
         options.encoding = "UTF-8"
         options.release.set(21)
     }
+    val pluginJar = jar.flatMap { it.archiveFile }
     test {
         useJUnit()
+        inputs.file(pluginJar)
+        systemProperty("xoops.plugin.jar", pluginJar.get().asFile.absolutePath)
     }
 }
